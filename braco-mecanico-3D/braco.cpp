@@ -198,11 +198,11 @@ void display(void){
                 
 	                // Indicador
 	                 glPushMatrix();
-	                  glTranslatef (0.1, -0.6, 0.1);
+	                  glTranslatef (0.1, -0.7, 0.1);
 			            glRotatef(90, 0, 0, 1); // horizontal -> vertical
-			            glScalef (2.0, 0.2, 0.2); // cubo -> retângulo
+			            glScalef (2.0, 0.4, 0.4); // cubo -> retângulo
 			            glColor3f(0.6,0.2,0.8);
-			            glutSolidCube (0.3); // Tamanho
+			            glutSolidCube (0.22); // Tamanho
 			        glPopMatrix();
                 
                 glPopMatrix(); // fim movimento indicador
@@ -215,11 +215,11 @@ void display(void){
                 
 	                // Anelar
 	                glPushMatrix();
-					  glTranslatef (0.1, -0.6, -0.1); // Move para a esquerda
+					  glTranslatef (0.1, -0.7, -0.1); // Move para a esquerda
 					  glRotatef(90, 0, 0, 1);         // Gira para a vertical
-					  glScalef (2.0, 0.2, 0.2);       // Mesma escala que o indicador
-					  glColor3f(0.6,0.2,0.8);         // Mesma cor
-					  glutSolidCube (0.3);            // Tamanho igual
+					  glScalef (2.0, 0.4, 0.4);       // Mesma escala que o indicador
+					  glColor3f(0.8,0.4,0.9);         // Mesma cor
+					  glutSolidCube (0.22);            // Tamanho igual
 					glPopMatrix();
                 
                 glPopMatrix(); // fim movimento anelar
@@ -232,11 +232,11 @@ void display(void){
                 
 	                // Polegar
 	                glPushMatrix();
-					  glTranslatef (-0.1, -0.6, 0.0); // Move para a esquerda
+					  glTranslatef (-0.1, -0.7, 0.0); // Move para a esquerda
 					  glRotatef(90, 0, 0, 1);         // Gira para a vertical
-					  glScalef (2.0, 0.2, 0.2);       // Mesma escala que o indicador
-					  glColor3f(0.6,0.2,0.8);         // Mesma cor
-					  glutSolidCube (0.3);            // Tamanho igual
+					  glScalef (2.0, 0.4, 0.4);       // Mesma escala que o indicador
+					  glColor3f(0.4,0.1,0.6);         // Mesma cor
+					  glutSolidCube (0.22);            // Tamanho igual
 					glPopMatrix();
                 
                 glPopMatrix(); // fim movimento polegar
