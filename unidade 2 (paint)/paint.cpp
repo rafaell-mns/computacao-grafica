@@ -98,7 +98,8 @@ void drawPixel(int x, int y);
 // Funcao que percorre a lista de formas geometricas, desenhando-as na tela
 void drawFormas();
 // Funcao que implementa o Algoritmo Imediato para rasterizacao de segmentos de retas
-void retaImediata(double x1,double y1,double x2,double y2);
+// void retaImediata(double x1,double y1,double x2,double y2);
+void algoritmoBresenham (double x1,double y1,double x2,double y2);
 
 
 /*
@@ -201,7 +202,7 @@ void mouse(int button, int state, int x, int y){
                         if(click1){
                             x_2 = x;
                             y_2 = height - y - 1;
-                            printf("Clique 2(%d, %d)\n",x_2,y_2);
+                            printf("Clique 2(%d, %d)\n\n",x_2,y_2);
                             pushLinha(x_1, y_1, x_2, y_2);
                             click1 = false;
                             glutPostRedisplay();
@@ -209,25 +210,13 @@ void mouse(int button, int state, int x, int y){
                             click1 = true;
                             x_1 = x;
                             y_1 = height - y - 1;
+                            printf("Linha\n");
                             printf("Clique 1(%d, %d)\n",x_1,y_1);
                         }
                     }
                 break;
             }
         break;
-
-//        case GLUT_MIDDLE_BUTTON:
-//            if (state == GLUT_DOWN) {
-//                glutPostRedisplay();
-//            }
-//        break;
-//
-//        case GLUT_RIGHT_BUTTON:
-//            if (state == GLUT_DOWN) {
-//                glutPostRedisplay();
-//            }
-//        break;
-            
     }
 }
 
@@ -253,7 +242,7 @@ void drawPixel(int x, int y){
  */
 void drawFormas(){
     //Apos o primeiro clique, desenha a reta com a posicao atual do mouse
-    if(click1) retaImediata(x_1, y_1, m_x, m_y);
+    if(click1) algoritmoBresenham(x_1, y_1, m_x, m_y);
     
     //Percorre a lista de formas geometricas para desenhar
     for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
@@ -266,7 +255,7 @@ void drawFormas(){
                     y[i] = v->y;
                 }
                 //Desenha o segmento de reta apos dois cliques
-                retaImediata(x[0], y[0], x[1], y[1]);
+                algoritmoBresenham(x[0], y[0], x[1], y[1]);
             break;
 //            case RET:
 //            break;
@@ -276,7 +265,6 @@ void drawFormas(){
 
 /*
  * Fucao que implementa o Algoritmo de Rasterizacao da Reta Imediata
- */
 void retaImediata(double x1, double y1, double x2, double y2){
     double m, b, yd, xd;
     double xmin, xmax,ymin,ymax;
@@ -315,4 +303,56 @@ void retaImediata(double x1, double y1, double x2, double y2){
     }
     drawPixel((int)x2,(int)y2);
 }
+*/
 
+void algoritmoBresenham(double x1, double y1, double x2, double y2) {
+    double delta_x, delta_y, desvio, x, y, incE, incNE;
+    int sinal_x, sinal_y;
+    bool trocado = false;
+    
+	delta_x = x2 - x1;
+    delta_y = y2 - y1;
+
+	// obter sinal para incrementar depois
+    sinal_x = (delta_x >= 0) ? 1 : -1;
+    sinal_y = (delta_y >= 0) ? 1 : -1;
+
+	// ponto inicial
+    x = x1;
+    y = y1;
+
+	// trocar delta x e delta y
+    if (abs(delta_y) > abs(delta_x)) { 
+        double temp_delta = delta_x;
+        delta_x = delta_y;
+        delta_y = temp_delta;
+        trocado = true;
+    }
+
+    desvio = 2 * abs(delta_y) - abs(delta_x);
+    incE = 2 * abs(delta_y);
+    incNE = 2 * abs(delta_y) - 2 * abs(delta_x);
+
+    drawPixel((int)x, (int)y);
+
+    for (int i = 0; i <= abs(delta_x); i++) {
+        if (desvio <= 0) {
+            if (!trocado) {
+                x += sinal_x;
+                drawPixel((int)x, (int)y);
+            } else {
+                y += sinal_y;
+                drawPixel((int)x, (int)y);
+            }
+            desvio += incE;
+        } else {
+            x += sinal_x; // Incrementa x
+            y += sinal_y; // Incrementa y
+            drawPixel((int)x, (int)y);
+            desvio += incNE;
+        }
+    }
+}
+
+
+	
