@@ -131,7 +131,7 @@ int main(int argc, char** argv){
     glutAddMenuEntry("Sair", 0);
     glutAttachMenu(GLUT_RIGHT_BUTTON);
 
-    
+	printf("Pressione 'C' para limpar a tela.\n\n");
     glutMainLoop(); // executa o loop do OpenGL
     return EXIT_SUCCESS; // retorna 0 para o tipo inteiro da funcao main();
 }
@@ -185,8 +185,15 @@ void menu_popup(int value){
 // Controle das teclas comuns do teclado
  
 void keyboard(unsigned char key, int x, int y){
-    switch (key) { // key - variavel que possui valor ASCII da tecla precionada
-        case ESC: exit(EXIT_SUCCESS); break;
+    switch (key) { // key - variável que possui valor ASCII da tecla pressionada
+        case ESC: 
+            exit(EXIT_SUCCESS); 
+            break;
+        case 'c': // Tecla 'C' para limpar a tela
+        case 'C':
+            formas.clear(); // Limpa a lista de formas
+            glutPostRedisplay(); // Atualiza a tela
+            break;
     }
 }
 
@@ -259,6 +266,16 @@ void drawFormas(){
 		//Apos o primeiro clique, desenha a reta com a posicao atual do mouse
     	if(click1) algoritmoBresenham(x_1, y_1, m_x, m_y);
 	}
+	if (modo == QUA) {
+        if (click1) {
+            // Posição do mouse será o segundo clique
+            // Vamos desenhar as arestas do quadrilátero
+            algoritmoBresenham(x_1, y_1, m_x, y_1); // Superior
+            algoritmoBresenham(m_x, y_1, m_x, m_y); // Direita
+            algoritmoBresenham(m_x, m_y, x_1, m_y); // Inferior
+            algoritmoBresenham(x_1, m_y, x_1, y_1); // Esquerda
+        }
+    }
     
     //Percorre a lista de formas geometricas para desenhar
     for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
