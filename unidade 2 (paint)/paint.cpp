@@ -18,6 +18,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <vector>
 #include <cstdlib>
 #include <forward_list>
 #include "glut_text.h"
@@ -28,7 +29,7 @@ using namespace std;
 #define ESC 27
 
 //Enumeracao com os tipos de formas geometricas
-enum tipo_forma{LIN = 1, TRI, RET, POL, CIR }; // Linha, Triangulo, Retangulo Poligono, Circulo
+enum tipo_forma{LIN = 1, QUA = 2, TRI, POL, CIR }; // Linha, Triangulo, Retangulo Poligono, Circulo
 
 //Verifica se foi realizado o primeiro clique do mouse
 bool click1 = false;
@@ -84,9 +85,14 @@ void pushLinha(int x1, int y1, int x2, int y2){
     pushVertice(x2, y2);
 }
 
-/*
- * Declaracoes antecipadas (forward) das funcoes (assinaturas das funcoes)
- */
+void pushQuadrilaterio(int x1, int y1, int x2, int y2){
+	pushForma(QUA);
+	pushVertice(x1, y1);
+    pushVertice(x2, y2);
+}
+
+
+// Declaracoes antecipadas (forward) das funcoes (assinaturas das funcoes)
 void init(void);
 void reshape(int w, int h);
 void display(void);
@@ -102,9 +108,7 @@ void drawFormas();
 void algoritmoBresenham (double x1,double y1,double x2,double y2);
 
 
-/*
- * Funcao principal
- */
+// Funcao principal
 int main(int argc, char** argv){
     glutInit(&argc, argv); // Passagens de parametro C para o glut
     glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB); //Selecao do Modo do Display e do Sistema de cor
@@ -121,7 +125,7 @@ int main(int argc, char** argv){
     // Define o menu pop-up
     glutCreateMenu(menu_popup);
     glutAddMenuEntry("Linha", LIN);
-//    glutAddMenuEntry("Retangulo", RET);
+	glutAddMenuEntry("Quadrilatero", QUA);
     glutAddMenuEntry("Sair", 0);
     glutAttachMenu(GLUT_RIGHT_BUTTON);
 
@@ -130,18 +134,15 @@ int main(int argc, char** argv){
     return EXIT_SUCCESS; // retorna 0 para o tipo inteiro da funcao main();
 }
 
-/*
- * Inicializa alguns parametros do GLUT
- */
+// Inicializa alguns parametros do GLUT
+ 
 void init(void){
     glClearColor(1.0, 1.0, 1.0, 1.0); //Limpa a tela com a cor branca;
 }
 
-/*
- * Ajusta a projecao para o redesenho da janela
- */
-void reshape(int w, int h)
-{
+// Ajusta a projecao para o redesenho da janela
+
+void reshape(int w, int h){
 	// Muda para o modo de projecao e reinicializa o sistema de coordenadas
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
@@ -159,9 +160,8 @@ void reshape(int w, int h)
 
 }
 
-/*
- * Controla os desenhos na tela
- */
+// Controla os desenhos na tela
+ 
 void display(void){
     glClear(GL_COLOR_BUFFER_BIT); //Limpa o buffer de cores e reinicia a matriz
     glColor3f (0.0, 0.0, 0.0); // Seleciona a cor default como preto
@@ -172,27 +172,24 @@ void display(void){
 
 }
 
-/*
- * Controla o menu pop-up
- */
+// Controla o menu pop-up
+ 
 void menu_popup(int value){
     if (value == 0) exit(EXIT_SUCCESS);
     modo = value;
 }
 
 
-/*
- * Controle das teclas comuns do teclado
- */
+// Controle das teclas comuns do teclado
+ 
 void keyboard(unsigned char key, int x, int y){
     switch (key) { // key - variavel que possui valor ASCII da tecla precionada
         case ESC: exit(EXIT_SUCCESS); break;
     }
 }
 
-/*
- * Controle dos botoes do mouse
- */
+// Controle dos botoes do mouse
+ 
 void mouse(int button, int state, int x, int y){
     switch (button) {
         case GLUT_LEFT_BUTTON:
@@ -215,50 +212,75 @@ void mouse(int button, int state, int x, int y){
                         }
                     }
                 break;
+            	case QUA:
+            		if (state == GLUT_DOWN) {
+						x_2 = x;
+						y_2 = height - y - 1;
+						printf("Vértice:(%d, %d)\n\n",x_2,y_2);
+						pushQuadrilaterio(x_1, y_1, x_2, y_2);
+						click1 = false;
+						glutPostRedisplay();
+					}else{
+					 	click1 = true;
+                        x_1 = x;
+                        y_1 = height - y - 1;
+                        printf("Quadrilatero\n");
+                        printf("Vértice(%d, %d)\n",x_1,y_1);
+					}
             }
         break;
     }
 }
 
-/*
- * Controle da posicao do cursor do mouse
- */
+// Controle da posicao do cursor do mouse
+ 
 void mousePassiveMotion(int x, int y){
     m_x = x; m_y = height - y - 1;
     glutPostRedisplay();
 }
 
-/*
- * Funcao para desenhar apenas um pixel na tela
- */
+// Funcao para desenhar apenas um pixel na tela
+ 
 void drawPixel(int x, int y){
     glBegin(GL_POINTS); // Seleciona a primitiva GL_POINTS para desenhar
         glVertex2i(x, y);
     glEnd();  // indica o fim do ponto
 }
 
-/*
- *Funcao que desenha a lista de formas geometricas
- */
+
+// Funcao que desenha a lista de formas geometricas
+ 
 void drawFormas(){
     //Apos o primeiro clique, desenha a reta com a posicao atual do mouse
     if(click1) algoritmoBresenham(x_1, y_1, m_x, m_y);
     
     //Percorre a lista de formas geometricas para desenhar
     for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
+    	int i = 0;
+    	vector<double> x, y;
         switch (f->tipo) {
             case LIN:
-                int i = 0, x[2], y[2];
                 //Percorre a lista de vertices da forma linha para desenhar
                 for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
-                    x[i] = v->x;
-                    y[i] = v->y;
+                    x.push_back(v->x);
+                    y.push_back(v->y);
                 }
                 //Desenha o segmento de reta apos dois cliques
                 algoritmoBresenham(x[0], y[0], x[1], y[1]);
             break;
-//            case RET:
-//            break;
+			case QUA:
+				for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
+                    x.push_back(v->x);
+                    y.push_back(v->y);
+                }
+                
+            	// Desenha quadrilatero
+            	double x1 = x[0], y1 = y[0], x2 = x[1], y2 = y[1];
+                algoritmoBresenham(x1, y1, x1, y2);
+				algoritmoBresenham(x1, y2, x2, y2);
+				algoritmoBresenham(x2, y2, x2, y1);
+				algoritmoBresenham(x2, y1, x1, y1);
+                break;
         }
     }
 }
@@ -337,22 +359,16 @@ void algoritmoBresenham(double x1, double y1, double x2, double y2) {
 
     for (int i = 0; i <= abs(delta_x); i++) {
         if (desvio <= 0) {
-            if (!trocado) {
-                x += sinal_x;
-                drawPixel((int)x, (int)y);
-            } else {
-                y += sinal_y;
-                drawPixel((int)x, (int)y);
-            }
+            if (!trocado) x += sinal_x;
+            else y += sinal_y;
+			
             desvio += incE;
         } else {
-            x += sinal_x; // Incrementa x
-            y += sinal_y; // Incrementa y
-            drawPixel((int)x, (int)y);
+            x += sinal_x;
+            y += sinal_y;
+            
             desvio += incNE;
         }
+        drawPixel((int)x, (int)y);
     }
 }
-
-
-	
