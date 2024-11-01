@@ -29,7 +29,7 @@ using namespace std;
 #define ESC 27
 
 //Enumeracao com os tipos de formas geometricas
-enum tipo_forma{LIN = 1, QUA = 2, TRI, POL, CIR }; // Linha, Triangulo, Retangulo Poligono, Circulo
+enum tipo_forma{LIN = 1, QUA = 2, TRI = 3, POL, CIR }; // Linha, Triangulo, Retangulo Poligono, Circulo
 
 //Verifica se foi realizado o primeiro clique do mouse
 bool click1 = false;
@@ -85,10 +85,12 @@ void pushLinha(int x1, int y1, int x2, int y2){
     pushVertice(x2, y2);
 }
 
-void pushQuadrilaterio(int x1, int y1, int x2, int y2){
+void pushQuadrilatero(int x1, int y1, int x2, int y2){
 	pushForma(QUA);
-	pushVertice(x1, y1);
-    pushVertice(x2, y2);
+	pushVertice(x1, y1); // vertice 1
+    pushVertice(x2, y2); // vertice 2
+    pushVertice(x2, y1); // vertice 3
+    pushVertice(x1, y2); // vertice 4
 }
 
 
@@ -214,21 +216,23 @@ void mouse(int button, int state, int x, int y){
                 break;
             	case QUA:
             		if (state == GLUT_DOWN) {
-						x_2 = x;
-						y_2 = height - y - 1;
-						printf("Vértice:(%d, %d)\n\n",x_2,y_2);
-						pushQuadrilaterio(x_1, y_1, x_2, y_2);
-						click1 = false;
-						glutPostRedisplay();
-					}else{
-					 	click1 = true;
-                        x_1 = x;
-                        y_1 = height - y - 1;
-                        printf("Quadrilatero\n");
-                        printf("Vértice(%d, %d)\n",x_1,y_1);
-					}
+				        if (click1) {
+				            x_2 = x;
+				            y_2 = height - y - 1; 
+				            printf("Clique 2(%d, %d)\n\n", x_2, y_2);
+				            pushQuadrilatero(x_1, y_1, x_2, y_2);
+				            click1 = false;
+				            glutPostRedisplay();
+				        } else {
+				        	click1 = true;
+				            x_1 = x;
+				            y_1 = height - y - 1; 
+				            printf("Quadrilatero\nClique 1(%d, %d)\n", x_1, y_1);
+				        }
+			    	}
+			    	break;
             }
-        break;
+        
     }
 }
 
@@ -251,8 +255,10 @@ void drawPixel(int x, int y){
 // Funcao que desenha a lista de formas geometricas
  
 void drawFormas(){
-    //Apos o primeiro clique, desenha a reta com a posicao atual do mouse
-    if(click1) algoritmoBresenham(x_1, y_1, m_x, m_y);
+	if (modo == LIN){
+		//Apos o primeiro clique, desenha a reta com a posicao atual do mouse
+    	if(click1) algoritmoBresenham(x_1, y_1, m_x, m_y);
+	}
     
     //Percorre a lista de formas geometricas para desenhar
     for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
@@ -267,7 +273,8 @@ void drawFormas(){
                 }
                 //Desenha o segmento de reta apos dois cliques
                 algoritmoBresenham(x[0], y[0], x[1], y[1]);
-            break;
+                
+            	break;
 			case QUA:
 				for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
                     x.push_back(v->x);
@@ -275,11 +282,10 @@ void drawFormas(){
                 }
                 
             	// Desenha quadrilatero
-            	double x1 = x[0], y1 = y[0], x2 = x[1], y2 = y[1];
-                algoritmoBresenham(x1, y1, x1, y2);
-				algoritmoBresenham(x1, y2, x2, y2);
-				algoritmoBresenham(x2, y2, x2, y1);
-				algoritmoBresenham(x2, y1, x1, y1);
+                algoritmoBresenham(x[0], y[0], x[2], y[2]); // superior
+				algoritmoBresenham(x[2], y[2], x[1], y[1]); // direita
+				algoritmoBresenham(x[1], y[1], x[3], y[3]); // inferior
+				algoritmoBresenham(x[3], y[3], x[0], y[0]); // esquerda
                 break;
         }
     }
@@ -361,12 +367,10 @@ void algoritmoBresenham(double x1, double y1, double x2, double y2) {
         if (desvio <= 0) {
             if (!trocado) x += sinal_x;
             else y += sinal_y;
-			
             desvio += incE;
         } else {
             x += sinal_x;
             y += sinal_y;
-            
             desvio += incNE;
         }
         drawPixel((int)x, (int)y);
