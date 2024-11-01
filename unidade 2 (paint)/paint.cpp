@@ -32,13 +32,13 @@ using namespace std;
 enum tipo_forma{LIN = 1, QUA = 2, TRI = 3, POL, CIR }; // Linha, Triangulo, Retangulo Poligono, Circulo
 
 //Verifica se foi realizado o primeiro clique do mouse
-bool click1 = false;
+bool click1 = false, click2 = false;
 
 //Coordenadas da posicao atual do mouse
 int m_x, m_y;
 
 //Coordenadas do primeiro clique e do segundo clique do mouse
-int x_1, y_1, x_2, y_2;
+int x_1, y_1, x_2, y_2, x_3, y_3;
 
 //Indica o tipo de forma geometrica ativa para desenhar
 int modo = LIN;
@@ -69,6 +69,7 @@ void pushForma(int tipo){
     formas.push_front(f);
 }
 
+
 // Funcao para armazenar um vertice na forma do inicio da lista de formas geometricas
 // Armazena sempre no inicio da lista
 void pushVertice(int x, int y){
@@ -91,8 +92,23 @@ void pushQuadrilatero(int x1, int y1, int x2, int y2){
     pushVertice(x2, y2); // vertice 2
     pushVertice(x2, y1); // vertice 3
     pushVertice(x1, y2); // vertice 4
+    
+    /*
+    1 --------- 3
+    |			|
+    |			|
+    |			|
+    4 --------- 2
+    
+    */
 }
 
+void pushTriangulo(int x1, int y1, int x2, int y2, int x3, int y3){
+	pushForma(TRI);
+	pushVertice(x1, y1);
+    pushVertice(x2, y2);
+    pushVertice(x3, y3);
+}
 
 // Declaracoes antecipadas (forward) das funcoes (assinaturas das funcoes)
 void init(void);
@@ -128,10 +144,11 @@ int main(int argc, char** argv){
     glutCreateMenu(menu_popup);
     glutAddMenuEntry("Linha", LIN);
 	glutAddMenuEntry("Quadrilatero", QUA);
+	glutAddMenuEntry("Triangulo", TRI);
     glutAddMenuEntry("Sair", 0);
     glutAttachMenu(GLUT_RIGHT_BUTTON);
 
-	printf("Pressione 'C' para limpar a tela.\n\n");
+	printf("Pressione 'C' para limpar a tela e 'Z' para apagar a última forma desenhada.\n\n");
     glutMainLoop(); // executa o loop do OpenGL
     return EXIT_SUCCESS; // retorna 0 para o tipo inteiro da funcao main();
 }
@@ -189,10 +206,15 @@ void keyboard(unsigned char key, int x, int y){
         case ESC: 
             exit(EXIT_SUCCESS); 
             break;
-        case 'c': // Tecla 'C' para limpar a tela
+        case 'c':
         case 'C':
-            formas.clear(); // Limpa a lista de formas
-            glutPostRedisplay(); // Atualiza a tela
+            formas.clear();
+            glutPostRedisplay();
+            break;
+        case 'z':
+	    case 'Z':
+	    	if(!formas.empty()) formas.pop_front();
+	    	glutPostRedisplay();
             break;
     }
 }
@@ -220,7 +242,7 @@ void mouse(int button, int state, int x, int y){
                             printf("Clique 1(%d, %d)\n",x_1,y_1);
                         }
                     }
-                break;
+                	break;
             	case QUA:
             		if (state == GLUT_DOWN) {
 				        if (click1) {
@@ -237,7 +259,28 @@ void mouse(int button, int state, int x, int y){
 				            printf("Quadrilatero\nClique 1(%d, %d)\n", x_1, y_1);
 				        }
 			    	}
-			    	break;
+   					break;
+   				case TRI:
+   					if (state == GLUT_DOWN){
+						if(!click1){
+							click1 = true;
+							x_1 = x;
+				            y_1 = height - y - 1;
+				            printf("Triangulo\nClique 1(%d, %d)\n", x_1, y_1);
+						} else if(!click2){
+							click2 = true;
+							x_2 = x;
+				            y_2 = height - y - 1; 
+				            printf("Clique 2(%d, %d)\n", x_2, y_2);
+						} else{
+							click1 = click2 = false;
+							x_3 = x;
+				            y_3 = height - y - 1;
+				            printf("Clique 3(%d, %d)\n\n", x_3, y_3);
+				            pushTriangulo(x_1, y_1, x_2, y_2, x_3, y_3);
+						}
+					} 
+					break;
             }
         
     }
@@ -262,20 +305,26 @@ void drawPixel(int x, int y){
 // Funcao que desenha a lista de formas geometricas
  
 void drawFormas(){
+	// Visualizacao previa
 	if (modo == LIN){
 		//Apos o primeiro clique, desenha a reta com a posicao atual do mouse
     	if(click1) algoritmoBresenham(x_1, y_1, m_x, m_y);
 	}
 	if (modo == QUA) {
         if (click1) {
-            // Posição do mouse será o segundo clique
-            // Vamos desenhar as arestas do quadrilátero
             algoritmoBresenham(x_1, y_1, m_x, y_1); // Superior
             algoritmoBresenham(m_x, y_1, m_x, m_y); // Direita
             algoritmoBresenham(m_x, m_y, x_1, m_y); // Inferior
             algoritmoBresenham(x_1, m_y, x_1, y_1); // Esquerda
         }
     }
+    if (modo == TRI){
+		if(click1) algoritmoBresenham(x_1, y_1, m_x, m_y);
+		if(click2){
+			algoritmoBresenham(x_2, y_2, m_x, m_y);
+			algoritmoBresenham(x_1, y_1, x_2, y_2);
+		}
+	}
     
     //Percorre a lista de formas geometricas para desenhar
     for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
@@ -304,6 +353,16 @@ void drawFormas(){
 				algoritmoBresenham(x[1], y[1], x[3], y[3]); // inferior
 				algoritmoBresenham(x[3], y[3], x[0], y[0]); // esquerda
                 break;
+            case TRI:
+            	for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
+                    x.push_back(v->x);
+                    y.push_back(v->y);
+                }
+                
+                algoritmoBresenham(x[0], y[0], x[1], y[1]);
+				algoritmoBresenham(x[1], y[1], x[2], y[2]);
+        		algoritmoBresenham(x[0], y[0], x[2], y[2]);
+        		break;
         }
     }
 }
