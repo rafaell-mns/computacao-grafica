@@ -34,8 +34,6 @@ enum tipo_transf{TRA = 6, ROT = 7};
 
 // Verificacoes booleanas
 bool click1 = false, click2 = false; 	// clique do mouse
-bool movido = false;					// controle da translacao
-bool calculado = false;					// controle para centroide e outros calculos
 
 // Coordenadas do mouse
 int m_x, m_y; 							// posicao atual do mouse
@@ -119,8 +117,8 @@ void mouse(int button, int state, int x, int y);
 void mousePassiveMotion(int x, int y);
 void drawPixel(int x, int y);
 void drawFormas();	// Funcao que percorre a lista de formas geometricas, desenhando-as na tela
-void drawTransformacoes(int dx, int dy);
-void translacao(int dx, int dy);
+void translacao(int dx, int dy);		// Declara translacao
+void rotacao();							// Declara rotacao
 void algoritmoBresenham (double x1,double y1,double x2,double y2);
 
 
@@ -190,11 +188,9 @@ void reshape(int w, int h){
 
 // Controla os desenhos na tela
 void display(void){
-	int dx = 0, dy = 0;
     glClear(GL_COLOR_BUFFER_BIT); 				//Limpa o buffer de cores e reinicia a matriz
     glColor3f (0.0, 0.0, 0.0); 					// Seleciona a cor default como preto
     drawFormas(); 								// Desenha as formas geometricas da lista
-    drawTransformacoes(dx, dy);
     //Desenha texto com as coordenadas da posicao do mouse
     draw_text_stroke(0, 0, "(" + to_string(m_x) + "," + to_string(m_y) + ")", 0.2);
     glutSwapBuffers(); 							// manda o OpenGl renderizar as primitivas
@@ -203,8 +199,12 @@ void display(void){
 // Controla o menu pop-up
 void menu_popup(int value){
     if (value == 0) exit(EXIT_SUCCESS);
-    modo = value;
-	operacao = value;
+    
+    if (value >= LIN && value <= CIR) {
+		modo = value;
+	} else if(value > CIR){
+		operacao = value;
+	}
 }
 
 // Controle das teclas comuns do teclado
@@ -213,41 +213,77 @@ void keyboard(unsigned char key, int x, int y){
         case ESC: 
             exit(EXIT_SUCCESS); 
             break;
-        case 'c':
+        case 'c':								// Limpar a tela
         case 'C':
             formas.clear();
             printf("Tela limpada!\n\n");
             glutPostRedisplay();
             break;
-        case 'z':
-	    case 'Z':
+        case 'z':								// Desfazer desenho
+	    case 'Z':			
 	    	if(!formas.empty()){
 			  formas.pop_front();
 	    	  printf("Ultima forma desfeita!\n\n");
 			  glutPostRedisplay();	
 			} 
             break;
-        case 'w':  // Mover para cima
-            movido = false;
-            printf("Translacao para cima\n");
-            translacao(0, 25);
-            break;
-        case 's': // Mover para baixo
-            movido = false;
-			printf("Translacao para baixo\n");
-            translacao(0, -25);
-            break;
-        case 'a': // Mover para a esquerda
-            movido = false;
-            printf("Translacao para esquerda\n");            
-            translacao(-25, 0);
-            break;
-        case 'd': // Mover para a direita
-            movido = false;
-            printf("Translacao para direita\n");            
-            translacao(25, 0);
-            break;
-            
+        case 'W':
+        case 'w': // Transformações geométricas
+		    // printf("Tecla 'w' pressionada. Operacao atual: %d\n", operacao); // Debugging
+		    switch (operacao) {
+		        case TRA:
+		            if(!formas.empty()){
+						printf("Translacao para cima\n");
+		            	translacao(0, 25);
+					} 
+		            break;
+		    }
+		    break;
+		case 'S':
+        case 's':
+        	switch (operacao) {
+		        case TRA:
+		            if(!formas.empty()){
+						printf("Translacao para baixo\n");
+		            	translacao(0, -25);
+					} 
+		            break;
+		    }
+		    break;
+        case 'A':
+        case 'a':
+        	switch (operacao) {
+		        case TRA:
+		            if(!formas.empty()){
+						printf("Translacao para esquerda\n");
+		            	translacao(-25, 0);
+					} 
+		            break;
+		        case ROT:
+		        	if(!formas.empty()){
+						printf("Rotacao\n");
+						rotacao();
+					}
+		            break;
+		    }
+		    break;
+        case 'D':
+        case 'd':
+        	switch (operacao) {
+		        case TRA:
+		            if(!formas.empty()){
+						printf("Translacao para direita\n");
+		            	translacao(25, 0);
+					} 
+		            break;
+		        case ROT:
+		        	if(!formas.empty()){
+						printf("Rotacao\n");
+						rotacao();
+					}
+		            break;
+		    }
+		    break;
     }
 }
 
@@ -319,55 +355,42 @@ void mouse(int button, int state, int x, int y){
 
 vertice calcularCentroide(forma& f) {
 	int somaX = 0, somaY = 0, n = 0, i = 0;
-	if(!calculado){
 		
-		for(forward_list<vertice>::iterator v = f.v.begin(); v != f.v.end(); v++, i++){
-	        somaX += v->x;
-	        somaY += v->y;
-	        ++n;
-	    }
-	    calculado = true;
-	}
+	for(forward_list<vertice>::iterator v = f.v.begin(); v != f.v.end(); v++, i++){
+        somaX += v->x;
+        somaY += v->y;
+        ++n;
+    }
+	  
 	if (n == 0) return vertice{0, 0}; // Retorna {0, 0} se não houver vértices
  	 return vertice{somaX / n, somaY / n}; // Retorna o centroide calculado	
 }
+
 
 void rotacao(){
 	for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
 		vertice centroide = calcularCentroide(*f); // Chama a função e obtém um vertice
         printf("Centroide: (%d, %d)\n", centroide.x, centroide.y); // Exibe o centroide
 	}
-	calculado = true;
 }
+
 
 // Transformacoes
 void translacao(int dx, int dy){
 	int i = 0;
-	if(!movido){
-		for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
-			for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
-			    v->x += dx;  	// Move o vértice em x
-			    v->y += dy;		// Move o vértice em y
-				printf("(x', y') = (%d, %d)\n", v->x, v->y);
-			}
-			printf("\n");
+	
+	for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
+		for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
+		    v->x += dx;  // Move o vértice na direção x
+		    v->y += dy;
+			printf("Novo valor de x: %d, Novo valor de y: %d\n", v->x, v->y);
 		}
-		movido = true;
 	}
-}
+	
+	printf("\n");
+	
+}	
 
-void drawTransformacoes(int dx, int dy){
-	switch(operacao){
-	case TRA:
-		translacao(dx, dy);
-		break;
-	case ROT:
-		rotacao();
-		break;
-	default:
-		break;
-	}
-}
 
 // Controle da posicao do cursor do mouse
 void mousePassiveMotion(int x, int y){
