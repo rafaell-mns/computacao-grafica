@@ -29,27 +29,23 @@ using namespace std;
 #define ESC 27
 
 //Enumeracao com os tipos de formas geometricas
-enum tipo_forma{LIN = 1, QUA = 2, TRI = 3, POL, CIR }; // Linha, Triangulo, Retangulo Poligono, Circulo
+enum tipo_forma{LIN = 1, QUA = 2, TRI = 3, POL = 4, CIR = 5}; // Linha, Triangulo, Retangulo Poligono, Circulo
 enum tipo_transf{TRA = 6, ROT = 7};
 
-bool movido = false;
-int dx = 0;
-int dy = 0;
+// Verificacoes booleanas
+bool click1 = false, click2 = false; 	// clique do mouse
+bool movido = false;					// controle da translacao
+bool calculado = false;					// controle para centroide e outros calculos
 
-//Verifica se foi realizado o primeiro clique do mouse
-bool click1 = false, click2 = false;
+// Coordenadas do mouse
+int m_x, m_y; 							// posicao atual do mouse
+int x_1, y_1, x_2, y_2, x_3, y_3;		// posicao de cada clique
 
-//Coordenadas da posicao atual do mouse
-int m_x, m_y;
-
-//Coordenadas do primeiro clique e do segundo clique do mouse
-int x_1, y_1, x_2, y_2, x_3, y_3;
-
-//Indica o tipo de forma geometrica ativa para desenhar
+// Indica o tipo de forma geometrica e tipo de operacao ativa para desenhar
 int modo = LIN;
-int operacao = 50;
+int operacao = TRA;
 
-//Largura e altura da janela
+// Largura e altura da janela
 int width = 512, height = 512;
 
 // Definicao de vertice
@@ -68,24 +64,21 @@ struct forma{
 forward_list<forma> formas;
 
 // Funcao para armazenar uma forma geometrica na lista de formas
-// Armazena sempre no inicio da lista
 void pushForma(int tipo){
     forma f;
     f.tipo = tipo;
-    formas.push_front(f);
+    formas.push_front(f);	// Armazena sempre no inicio da lista
 }
 
-
 // Funcao para armazenar um vertice na forma do inicio da lista de formas geometricas
-// Armazena sempre no inicio da lista
 void pushVertice(int x, int y){
     vertice v;
     v.x = x;
     v.y = y;
-    formas.front().v.push_front(v);
+    formas.front().v.push_front(v);		// Armazena sempre no inicio da lista
 }
 
-//Fucao para armazenar uma Linha na lista de formas geometricas
+// Funcao para armazenar uma Linha na lista de formas geometricas
 void pushLinha(int x1, int y1, int x2, int y2){
     pushForma(LIN);
     pushVertice(x1, y1);
@@ -125,35 +118,31 @@ void keyboard(unsigned char key, int x, int y);
 void mouse(int button, int state, int x, int y);
 void mousePassiveMotion(int x, int y);
 void drawPixel(int x, int y);
-// Funcao que percorre a lista de formas geometricas, desenhando-as na tela
-void drawFormas();
-void drawTransformacoes();
-void translacao();
-// Funcao que implementa o Algoritmo Imediato para rasterizacao de segmentos de retas
-// void retaImediata(double x1,double y1,double x2,double y2);
+void drawFormas();	// Funcao que percorre a lista de formas geometricas, desenhando-as na tela
+void drawTransformacoes(int dx, int dy);
+void translacao(int dx, int dy);
 void algoritmoBresenham (double x1,double y1,double x2,double y2);
 
 
 // Funcao principal
 int main(int argc, char** argv){
-    glutInit(&argc, argv); // Passagens de parametro C para o glut
-    glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB); //Selecao do Modo do Display e do Sistema de cor
-    glutInitWindowSize (width, height);  // Tamanho da janela do OpenGL
-    glutInitWindowPosition (100, 100); //Posicao inicial da janela do OpenGL
-    glutCreateWindow ("Computacao Grafica: Paint"); // Da nome para uma janela OpenGL
-    init(); // Chama funcao init();
-    glutReshapeFunc(reshape); //funcao callback para redesenhar a tela
-    glutKeyboardFunc(keyboard); //funcao callback do teclado
-    glutMouseFunc(mouse); //funcao callback do mouse
-    glutPassiveMotionFunc(mousePassiveMotion); //fucao callback do movimento passivo do mouse
-    glutDisplayFunc(display); //funcao callback de desenho
+    glutInit(&argc, argv); 									// Passagens de parametro C para o glut
+    glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB); 			// Selecao do Modo do Display e do Sistema de cor
+    glutInitWindowSize (width, height);  					// Tamanho da janela do OpenGL
+    glutInitWindowPosition (100, 100); 						// Posicao inicial da janela do OpenGL
+    glutCreateWindow ("Computacao Grafica: Paint"); 		// Da nome para uma janela OpenGL
+    init(); 												// Chama funcao init();
+    glutReshapeFunc(reshape); 								// funcao callback para redesenhar a tela
+    glutKeyboardFunc(keyboard); 							// funcao callback do teclado
+    glutMouseFunc(mouse); 									// funcao callback do mouse
+    glutPassiveMotionFunc(mousePassiveMotion); 				// funcao callback do movimento passivo do mouse
+    glutDisplayFunc(display); 								// funcao callback de desenho
     
-    // Sub menu
+    // Sub menus
     int menu_desenhar = glutCreateMenu(menu_popup);
     glutAddMenuEntry("Linha", LIN);
 	glutAddMenuEntry("Quadrilatero", QUA);
 	glutAddMenuEntry("Triangulo", TRI);
-	
 	int menu_transformacao = glutCreateMenu(menu_popup);
 	glutAddMenuEntry("Translacao", TRA);
 	glutAddMenuEntry("Rotacao", ROT);
@@ -163,25 +152,24 @@ int main(int argc, char** argv){
 	glutAddSubMenu("Desenhar", menu_desenhar);
 	glutAddSubMenu("Transformar", menu_transformacao);
 	glutAddMenuEntry("Sair", 0);
-	
 	glutAttachMenu(GLUT_RIGHT_BUTTON);
 	
+	printf("Por padrao, LINHA e TRANSLACAO estao previamente selecionados\n\n");
 	printf("Teclas:\n");
 	printf("  'C' - Limpar a tela\n");
-	printf("  'Z' - Apagar a ultima forma desenhada\n\n");
+	printf("  'Z' - Apagar a ultima forma desenhada\n");
+	printf("  'WASD' - Controlar a translacao\n\n");
 
-    glutMainLoop(); // executa o loop do OpenGL
-    return EXIT_SUCCESS; // retorna 0 para o tipo inteiro da funcao main();
+    glutMainLoop(); 			// executa o loop do OpenGL
+    return EXIT_SUCCESS; 		// retorna 0 para o tipo inteiro da funcao main();
 }
 
 // Inicializa alguns parametros do GLUT
- 
 void init(void){
     glClearColor(1.0, 1.0, 1.0, 1.0); //Limpa a tela com a cor branca;
 }
 
 // Ajusta a projecao para o redesenho da janela
-
 void reshape(int w, int h){
 	// Muda para o modo de projecao e reinicializa o sistema de coordenadas
 	glMatrixMode(GL_PROJECTION);
@@ -201,29 +189,25 @@ void reshape(int w, int h){
 }
 
 // Controla os desenhos na tela
- 
 void display(void){
-    glClear(GL_COLOR_BUFFER_BIT); //Limpa o buffer de cores e reinicia a matriz
-    glColor3f (0.0, 0.0, 0.0); // Seleciona a cor default como preto
-    drawFormas(); // Desenha as formas geometricas da lista
-    drawTransformacoes();
+	int dx = 0, dy = 0;
+    glClear(GL_COLOR_BUFFER_BIT); 				//Limpa o buffer de cores e reinicia a matriz
+    glColor3f (0.0, 0.0, 0.0); 					// Seleciona a cor default como preto
+    drawFormas(); 								// Desenha as formas geometricas da lista
+    drawTransformacoes(dx, dy);
     //Desenha texto com as coordenadas da posicao do mouse
     draw_text_stroke(0, 0, "(" + to_string(m_x) + "," + to_string(m_y) + ")", 0.2);
-    glutSwapBuffers(); // manda o OpenGl renderizar as primitivas
+    glutSwapBuffers(); 							// manda o OpenGl renderizar as primitivas
 }
 
 // Controla o menu pop-up
- 
 void menu_popup(int value){
     if (value == 0) exit(EXIT_SUCCESS);
     modo = value;
 	operacao = value;
 }
 
-
 // Controle das teclas comuns do teclado
-
-
 void keyboard(unsigned char key, int x, int y){
     switch (key) { // key - variável que possui valor ASCII da tecla pressionada
         case ESC: 
@@ -243,35 +227,31 @@ void keyboard(unsigned char key, int x, int y){
 			  glutPostRedisplay();	
 			} 
             break;
-        case 'w': // Mover para cima
-            dy = 25;
-            dx = 0;
+        case 'w':  // Mover para cima
             movido = false;
-            translacao();
+            printf("Translacao para cima\n");
+            translacao(0, 25);
             break;
         case 's': // Mover para baixo
-            dy = 25;
-            dx = 0;
             movido = false;
-            translacao();
+			printf("Translacao para baixo\n");
+            translacao(0, -25);
             break;
         case 'a': // Mover para a esquerda
-            dx = -25;
-            dy = 0;
             movido = false;
-            translacao();
+            printf("Translacao para esquerda\n");            
+            translacao(-25, 0);
             break;
         case 'd': // Mover para a direita
-            dx = 25;
-            dy = 0;
             movido = false;
-            translacao();
+            printf("Translacao para direita\n");            
+            translacao(25, 0);
             break;
+            
     }
 }
 
 // Controle dos botoes do mouse
- 
 void mouse(int button, int state, int x, int y){
     switch (button) {
         case GLUT_LEFT_BUTTON:
@@ -281,7 +261,7 @@ void mouse(int button, int state, int x, int y){
                         if(click1){
                             x_2 = x;
                             y_2 = height - y - 1;
-                            printf("Clique 2(%d, %d)\n\n",x_2,y_2);
+                            printf("Clique 2 (%d, %d)\n\n",x_2,y_2);
                             pushLinha(x_1, y_1, x_2, y_2);
                             click1 = false;
                             glutPostRedisplay();
@@ -290,7 +270,7 @@ void mouse(int button, int state, int x, int y){
                             x_1 = x;
                             y_1 = height - y - 1;
                             printf("Linha\n");
-                            printf("Clique 1(%d, %d)\n",x_1,y_1);
+                            printf("Clique 1 (%d, %d)\n",x_1,y_1);
                         }
                     }
                 	break;
@@ -299,7 +279,7 @@ void mouse(int button, int state, int x, int y){
 				        if (click1) {
 				            x_2 = x;
 				            y_2 = height - y - 1; 
-				            printf("Clique 2(%d, %d)\n\n", x_2, y_2);
+				            printf("Clique 2 (%d, %d)\n\n", x_2, y_2);
 				            pushQuadrilatero(x_1, y_1, x_2, y_2);
 				            click1 = false;
 				            glutPostRedisplay();
@@ -307,7 +287,7 @@ void mouse(int button, int state, int x, int y){
 				        	click1 = true;
 				            x_1 = x;
 				            y_1 = height - y - 1; 
-				            printf("Quadrilatero\nClique 1(%d, %d)\n", x_1, y_1);
+				            printf("Quadrilatero\nClique 1 (%d, %d)\n", x_1, y_1);
 				        }
 			    	}
    					break;
@@ -317,17 +297,17 @@ void mouse(int button, int state, int x, int y){
 							click1 = true;
 							x_1 = x;
 				            y_1 = height - y - 1;
-				            printf("Triangulo\nClique 1(%d, %d)\n", x_1, y_1);
+				            printf("Triangulo\nClique 1 (%d, %d)\n", x_1, y_1);
 						} else if(!click2){
 							click2 = true;
 							x_2 = x;
 				            y_2 = height - y - 1; 
-				            printf("Clique 2(%d, %d)\n", x_2, y_2);
+				            printf("Clique 2 (%d, %d)\n", x_2, y_2);
 						} else{
 							click1 = click2 = false;
 							x_3 = x;
 				            y_3 = height - y - 1;
-				            printf("Clique 3(%d, %d)\n\n", x_3, y_3);
+				            printf("Clique 3 (%d, %d)\n\n", x_3, y_3);
 				            pushTriangulo(x_1, y_1, x_2, y_2, x_3, y_3);
 						}
 					} 
@@ -337,31 +317,52 @@ void mouse(int button, int state, int x, int y){
     }
 }
 
+vertice calcularCentroide(forma& f) {
+	int somaX = 0, somaY = 0, n = 0, i = 0;
+	if(!calculado){
+		
+		for(forward_list<vertice>::iterator v = f.v.begin(); v != f.v.end(); v++, i++){
+	        somaX += v->x;
+	        somaY += v->y;
+	        ++n;
+	    }
+	    calculado = true;
+	}
+	if (n == 0) return vertice{0, 0}; // Retorna {0, 0} se não houver vértices
+ 	 return vertice{somaX / n, somaY / n}; // Retorna o centroide calculado	
+}
 
-void translacao(){
+void rotacao(){
+	for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
+		vertice centroide = calcularCentroide(*f); // Chama a função e obtém um vertice
+        printf("Centroide: (%d, %d)\n", centroide.x, centroide.y); // Exibe o centroide
+	}
+	calculado = true;
+}
+
+// Transformacoes
+void translacao(int dx, int dy){
 	int i = 0;
 	if(!movido){
 		for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
 			for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
-			    v->x += dx;  // Move o vértice na direção x
-			    v->y += dy;
-				printf("Novo valor de x: %d, Novo valor de y: %d\n", v->x, v->y);
+			    v->x += dx;  	// Move o vértice em x
+			    v->y += dy;		// Move o vértice em y
+				printf("(x', y') = (%d, %d)\n", v->x, v->y);
 			}
+			printf("\n");
 		}
 		movido = true;
-		printf("fim\n\n");
 	}
 }
 
-
-void drawTransformacoes(){
-	int j = 0;
-	vector<double> x, y;
+void drawTransformacoes(int dx, int dy){
 	switch(operacao){
 	case TRA:
-		translacao();
+		translacao(dx, dy);
 		break;
 	case ROT:
+		rotacao();
 		break;
 	default:
 		break;
@@ -369,26 +370,22 @@ void drawTransformacoes(){
 }
 
 // Controle da posicao do cursor do mouse
- 
 void mousePassiveMotion(int x, int y){
     m_x = x; m_y = height - y - 1;
     glutPostRedisplay();
 }
 
 // Funcao para desenhar apenas um pixel na tela
- 
 void drawPixel(int x, int y){
-    glBegin(GL_POINTS); // Seleciona a primitiva GL_POINTS para desenhar
+    glBegin(GL_POINTS); 	// Seleciona a primitiva GL_POINTS para desenhar
         glVertex2i(x, y);
-    glEnd();  // indica o fim do ponto
+    glEnd();  				// indica o fim do ponto
 }
-
 
 // Funcao que desenha a lista de formas geometricas
 void drawFormas(){
 	// Visualizacao previa
 	if (modo == LIN){
-		//Apos o primeiro clique, desenha a reta com a posicao atual do mouse
     	if(click1) algoritmoBresenham(x_1, y_1, m_x, m_y);
 	}
 	if (modo == QUA) {
@@ -448,49 +445,6 @@ void drawFormas(){
     }
 }
 
-
-/*
- * Fucao que implementa o Algoritmo de Rasterizacao da Reta Imediata
-void retaImediata(double x1, double y1, double x2, double y2){
-    double m, b, yd, xd;
-    double xmin, xmax,ymin,ymax;
-    
-    drawPixel((int)x1,(int)y1);
-    if(x2-x1 != 0){ //Evita a divisao por zero
-        m = (y2-y1)/(x2-x1);
-        b = y1 - (m*x1);
-
-        if(m>=-1 && m <= 1){ // Verifica se o declive da reta tem tg de -1 a 1, se verdadeira calcula incrementando x
-            xmin = (x1 < x2)? x1 : x2;
-            xmax = (x1 > x2)? x1 : x2;
-
-            for(int x = (int)xmin+1; x < xmax; x++){
-                yd = (m*x)+b;
-                yd = floor(0.5+yd);
-                drawPixel(x,(int)yd);
-            }
-        }else{ // Se tg menor que -1 ou maior que 1, calcula incrementado os valores de y
-            ymin = (y1 < y2)? y1 : y2;
-            ymax = (y1 > y2)? y1 : y2;
-
-            for(int y = (int)ymin + 1; y < ymax; y++){
-                xd = (y - b)/m;
-                xd = floor(0.5+xd);
-                drawPixel((int)xd,y);
-            }
-        }
-
-    }else{ // se x2-x1 == 0, reta perpendicular ao eixo x
-        ymin = (y1 < y2)? y1 : y2;
-        ymax = (y1 > y2)? y1 : y2;
-        for(int y = (int)ymin + 1; y < ymax; y++){
-            drawPixel((int)x1,y);
-        }
-    }
-    drawPixel((int)x2,(int)y2);
-}
-*/
-
 void algoritmoBresenham(double x1, double y1, double x2, double y2) {
     double delta_x, delta_y, desvio, x, y, incE, incNE;
     int sinal_x, sinal_y;
@@ -526,11 +480,12 @@ void algoritmoBresenham(double x1, double y1, double x2, double y2) {
             if (!trocado) x += sinal_x;
             else y += sinal_y;
             desvio += incE;
-        } else {
+        }else {
             x += sinal_x;
             y += sinal_y;
             desvio += incNE;
         }
+        
         drawPixel((int)x, (int)y);
     }
 }
