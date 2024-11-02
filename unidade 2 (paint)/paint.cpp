@@ -32,6 +32,10 @@ using namespace std;
 enum tipo_forma{LIN = 1, QUA = 2, TRI = 3, POL, CIR }; // Linha, Triangulo, Retangulo Poligono, Circulo
 enum tipo_transf{TRA = 6, ROT = 7};
 
+bool movido = false;
+int dx = 0;
+int dy = 0;
+
 //Verifica se foi realizado o primeiro clique do mouse
 bool click1 = false, click2 = false;
 
@@ -43,6 +47,7 @@ int x_1, y_1, x_2, y_2, x_3, y_3;
 
 //Indica o tipo de forma geometrica ativa para desenhar
 int modo = LIN;
+int operacao = 50;
 
 //Largura e altura da janela
 int width = 512, height = 512;
@@ -122,6 +127,8 @@ void mousePassiveMotion(int x, int y);
 void drawPixel(int x, int y);
 // Funcao que percorre a lista de formas geometricas, desenhando-as na tela
 void drawFormas();
+void drawTransformacoes();
+void translacao();
 // Funcao que implementa o Algoritmo Imediato para rasterizacao de segmentos de retas
 // void retaImediata(double x1,double y1,double x2,double y2);
 void algoritmoBresenham (double x1,double y1,double x2,double y2);
@@ -199,10 +206,10 @@ void display(void){
     glClear(GL_COLOR_BUFFER_BIT); //Limpa o buffer de cores e reinicia a matriz
     glColor3f (0.0, 0.0, 0.0); // Seleciona a cor default como preto
     drawFormas(); // Desenha as formas geometricas da lista
+    drawTransformacoes();
     //Desenha texto com as coordenadas da posicao do mouse
     draw_text_stroke(0, 0, "(" + to_string(m_x) + "," + to_string(m_y) + ")", 0.2);
     glutSwapBuffers(); // manda o OpenGl renderizar as primitivas
-
 }
 
 // Controla o menu pop-up
@@ -210,11 +217,13 @@ void display(void){
 void menu_popup(int value){
     if (value == 0) exit(EXIT_SUCCESS);
     modo = value;
+	operacao = value;
 }
 
 
 // Controle das teclas comuns do teclado
- 
+
+
 void keyboard(unsigned char key, int x, int y){
     switch (key) { // key - variável que possui valor ASCII da tecla pressionada
         case ESC: 
@@ -233,6 +242,30 @@ void keyboard(unsigned char key, int x, int y){
 	    	  printf("Ultima forma desfeita!\n\n");
 			  glutPostRedisplay();	
 			} 
+            break;
+        case 'w': // Mover para cima
+            dy = 25;
+            dx = 0;
+            movido = false;
+            translacao();
+            break;
+        case 's': // Mover para baixo
+            dy = 25;
+            dx = 0;
+            movido = false;
+            translacao();
+            break;
+        case 'a': // Mover para a esquerda
+            dx = -25;
+            dy = 0;
+            movido = false;
+            translacao();
+            break;
+        case 'd': // Mover para a direita
+            dx = 25;
+            dy = 0;
+            movido = false;
+            translacao();
             break;
     }
 }
@@ -304,6 +337,37 @@ void mouse(int button, int state, int x, int y){
     }
 }
 
+
+void translacao(){
+	int i = 0;
+	if(!movido){
+		for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
+			for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
+			    v->x += dx;  // Move o vértice na direção x
+			    v->y += dy;
+				printf("Novo valor de x: %d, Novo valor de y: %d\n", v->x, v->y);
+			}
+		}
+		movido = true;
+		printf("fim\n\n");
+	}
+}
+
+
+void drawTransformacoes(){
+	int j = 0;
+	vector<double> x, y;
+	switch(operacao){
+	case TRA:
+		translacao();
+		break;
+	case ROT:
+		break;
+	default:
+		break;
+	}
+}
+
 // Controle da posicao do cursor do mouse
  
 void mousePassiveMotion(int x, int y){
@@ -321,7 +385,6 @@ void drawPixel(int x, int y){
 
 
 // Funcao que desenha a lista de formas geometricas
- 
 void drawFormas(){
 	// Visualizacao previa
 	if (modo == LIN){
@@ -384,6 +447,7 @@ void drawFormas(){
         }
     }
 }
+
 
 /*
  * Fucao que implementa o Algoritmo de Rasterizacao da Reta Imediata
