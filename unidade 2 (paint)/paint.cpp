@@ -16,6 +16,11 @@
     #include <GL/glu.h>
 #endif
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+
 #include <cmath>
 #include <cstdio>
 #include <vector>
@@ -56,6 +61,11 @@ struct vertice{
 struct forma{
     int tipo;
     forward_list<vertice> v; //lista encadeada de vertices
+};
+
+// Definicao matriz 3x3 para calculos
+struct Matriz3x3 {
+    float m[3][3];
 };
 
 // Lista encadeada de formas geometricas
@@ -118,7 +128,7 @@ void mousePassiveMotion(int x, int y);
 void drawPixel(int x, int y);
 void drawFormas();	// Funcao que percorre a lista de formas geometricas, desenhando-as na tela
 void translacao(int dx, int dy);		// Declara translacao
-void rotacao();							// Declara rotacao
+void rotacao(float angulo);							// Declara rotacao
 void algoritmoBresenham (double x1,double y1,double x2,double y2);
 
 
@@ -207,6 +217,9 @@ void menu_popup(int value){
 	}
 }
 
+int distancia_translacao = 25;
+float angulo = 45 * (M_PI / 180); // 45º em radianos
+
 // Controle das teclas comuns do teclado
 void keyboard(unsigned char key, int x, int y){
     switch (key) { // key - variável que possui valor ASCII da tecla pressionada
@@ -234,7 +247,7 @@ void keyboard(unsigned char key, int x, int y){
 		        case TRA:
 		            if(!formas.empty()){
 						printf("Translacao para cima\n");
-		            	translacao(0, 25);
+		            	translacao(0, distancia_translacao);
 					} 
 		            break;
 		    }
@@ -245,7 +258,7 @@ void keyboard(unsigned char key, int x, int y){
 		        case TRA:
 		            if(!formas.empty()){
 						printf("Translacao para baixo\n");
-		            	translacao(0, -25);
+		            	translacao(0, -distancia_translacao);
 					} 
 		            break;
 		    }
@@ -256,13 +269,13 @@ void keyboard(unsigned char key, int x, int y){
 		        case TRA:
 		            if(!formas.empty()){
 						printf("Translacao para esquerda\n");
-		            	translacao(-25, 0);
+		            	translacao(-distancia_translacao, 0);
 					} 
 		            break;
 		        case ROT:
 		        	if(!formas.empty()){
 						printf("Rotacao\n");
-						rotacao();
+						rotacao(angulo);
 					}
 		            break;
 		    }
@@ -273,13 +286,13 @@ void keyboard(unsigned char key, int x, int y){
 		        case TRA:
 		            if(!formas.empty()){
 						printf("Translacao para direita\n");
-		            	translacao(25, 0);
+		            	translacao(distancia_translacao, 0);
 					} 
 		            break;
 		        case ROT:
 		        	if(!formas.empty()){
 						printf("Rotacao\n");
-						rotacao();
+						rotacao(angulo);
 					}
 		            break;
 		    }
@@ -353,6 +366,18 @@ void mouse(int button, int state, int x, int y){
     }
 }
 
+Matriz3x3 multiplicarMatrizes(Matriz3x3 a, Matriz3x3 b) {
+    Matriz3x3 resultado = {{{0}}}; // Inicializa a matriz resultado
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            for (int k = 0; k < 3; k++) {
+                resultado.m[i][j] += a.m[i][k] * b.m[k][j];
+            }
+        }
+    }
+    return resultado;
+}
+
 vertice calcularCentroide(forma& f) {
 	int somaX = 0, somaY = 0, n = 0, i = 0;
 		
@@ -362,15 +387,110 @@ vertice calcularCentroide(forma& f) {
         ++n;
     }
 	  
-	if (n == 0) return vertice{0, 0}; // Retorna {0, 0} se não houver vértices
- 	 return vertice{somaX / n, somaY / n}; // Retorna o centroide calculado	
+	if (n == 0) return vertice{0, 0}; 			// Retorna {0, 0} se não houver vértices
+ 	 return vertice{somaX/n, somaY/n}; 		// Retorna o centroide calculado	
+}
+
+void imprimirMatriz(const Matriz3x3& matriz) {
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            printf("%.2f ", matriz.m[i][j]); // Formatação com duas casas decimais
+        }
+        printf("\n"); // Nova linha após cada linha da matriz
+    }
 }
 
 
-void rotacao(){
+void rotacao(float angulo){
+	int i = 0;
+	Matriz3x3 matrizRotacao;
+	matrizRotacao.m[0][0] = std::cos(angulo);
+	matrizRotacao.m[0][1] = -std::sin(angulo);
+	matrizRotacao.m[0][2] = 0;
+	
+	matrizRotacao.m[1][0] = std::sin(angulo);
+	matrizRotacao.m[1][1] = std::cos(angulo);
+	matrizRotacao.m[1][2] = 0;
+	
+	matrizRotacao.m[2][0] = 0;
+	matrizRotacao.m[2][1] = 0;
+	matrizRotacao.m[2][2] = 1;
+		
 	for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
-		vertice centroide = calcularCentroide(*f); // Chama a função e obtém um vertice
-        printf("Centroide: (%d, %d)\n", centroide.x, centroide.y); // Exibe o centroide
+		vertice centroide = calcularCentroide(*f); 					// Chama a função e obtém um vertice
+        printf("Centroide: (%d, %d)\n", centroide.x, centroide.y); 	// Exibe o centroide
+        // Multiplicar -translacao centroide * matriz de rotacao
+        	
+		Matriz3x3 translacaoParaOrigem;
+		translacaoParaOrigem.m[0][0] = 1;				// 1º coluna
+		translacaoParaOrigem.m[0][1] = 0;
+		translacaoParaOrigem.m[0][2] = -centroide.x;
+		translacaoParaOrigem.m[1][0] = 0;				// 2º coluna
+		translacaoParaOrigem.m[1][1] = 1;
+		translacaoParaOrigem.m[1][2] = -centroide.y;
+		translacaoParaOrigem.m[2][0] = 0;				// 3º coluna
+		translacaoParaOrigem.m[2][1] = 0;
+		translacaoParaOrigem.m[2][2] = 1;
+        
+        Matriz3x3 translacaoDeVolta;
+		translacaoDeVolta.m[0][0] = 1;					// 1º coluna
+		translacaoDeVolta.m[0][1] = 0;
+		translacaoDeVolta.m[0][2] = centroide.x;
+		translacaoDeVolta.m[1][0] = 0;					// 2º coluna
+		translacaoDeVolta.m[1][1] = 1;
+		translacaoDeVolta.m[1][2] = centroide.y;
+		translacaoDeVolta.m[2][0] = 0;					// 3º coluna
+		translacaoDeVolta.m[2][1] = 0;
+		translacaoDeVolta.m[2][2] = 1;
+		
+		for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
+			printf("Vertices: (%d, %d)\n", v->x, v->y);
+			
+			Matriz3x3 ponto;
+			ponto.m[0][0] = v->x;
+			ponto.m[1][0] = v->y;
+			ponto.m[2][0] = 1;
+			
+			Matriz3x3 resultado = multiplicarMatrizes(
+		        translacaoDeVolta, // Translada de volta
+		        multiplicarMatrizes(
+		            matrizRotacao,   // Rotaciona
+		            multiplicarMatrizes(translacaoParaOrigem, ponto) // Translada para a origem
+		        )
+		    );
+			
+			printf("Matriz Resultado:\n");
+		    imprimirMatriz(resultado);
+		    printf("\n");
+		}
+        
+       
+        
+        /*
+			
+				
+			
+			
+			// Na funcao rotacao()
+			Matriz3x3 ponto = {
+			    {x},   // Primeira coluna
+			    {y},   // Segunda coluna
+			    {1}    // Terceira coluna
+			};
+			
+	        Matriz3x3 translacaoParaOrigem = {
+	            {1, 0, -centroide.x},
+	            {0, 1, -centroide.y},
+	            {0, 0, 1}
+	        };
+	        Matriz3x3 translacaoDeVolta = {
+	            {1, 0, centroide.x},
+	            {0, 1, centroide.y},
+	            {0, 0, 1}
+   			};
+        */
+        
+        // Multiplicar resultado * +translacao centroide
 	}
 }
 
@@ -381,8 +501,8 @@ void translacao(int dx, int dy){
 	
 	for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
 		for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
-		    v->x += dx;  // Move o vértice na direção x
-		    v->y += dy;
+		    v->x += dx;  // Move o vértice em x
+		    v->y += dy;	 // Move o vértice em y
 			printf("Novo valor de x: %d, Novo valor de y: %d\n", v->x, v->y);
 		}
 	}
@@ -390,7 +510,6 @@ void translacao(int dx, int dy){
 	printf("\n");
 	
 }	
-
 
 // Controle da posicao do cursor do mouse
 void mousePassiveMotion(int x, int y){
