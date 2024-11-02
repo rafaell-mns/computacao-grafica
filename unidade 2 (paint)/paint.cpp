@@ -207,9 +207,10 @@ void menu_popup(int value){
 	}
 }
 
-
-float angulo = 45.0; // ângulo em graus
+int deslocamento = 30;
+int angulo = 45.0; // ângulo em graus
 float anguloEmRadianos = angulo * (PI / 180.0);
+
 // Controle das teclas comuns do teclado
 void keyboard(unsigned char key, int x, int y){
     switch (key) { // key - variável que possui valor ASCII da tecla pressionada
@@ -219,25 +220,24 @@ void keyboard(unsigned char key, int x, int y){
         case 'c':								// Limpar a tela
         case 'C':
             formas.clear();
-            printf("Tela limpada!\n\n");
+            printf("Tela limpada\n\n");
             glutPostRedisplay();
             break;
         case 'z':								// Desfazer desenho
 	    case 'Z':			
 	    	if(!formas.empty()){
 			  formas.pop_front();
-	    	  printf("Ultima forma desfeita!\n\n");
+	    	  printf("Ultima forma desfeita\n\n");
 			  glutPostRedisplay();	
 			} 
             break;
         case 'W':
         case 'w': // Transformações geométricas
-		    // printf("Tecla 'w' pressionada. Operacao atual: %d\n", operacao); // Debugging
 		    switch (operacao) {
 		        case TRA:
 		            if(!formas.empty()){
 						printf("Translacao para cima\n");
-		            	translacao(0, 25);
+		            	translacao(0, deslocamento);
 					} 
 		            break;
 		    }
@@ -248,7 +248,7 @@ void keyboard(unsigned char key, int x, int y){
 		        case TRA:
 		            if(!formas.empty()){
 						printf("Translacao para baixo\n");
-		            	translacao(0, -25);
+		            	translacao(0, -deslocamento);
 					} 
 		            break;
 		    }
@@ -259,12 +259,12 @@ void keyboard(unsigned char key, int x, int y){
 		        case TRA:
 		            if(!formas.empty()){
 						printf("Translacao para esquerda\n");
-		            	translacao(-25, 0);
+		            	translacao(-deslocamento, 0);
 					} 
 		            break;
 		        case ROT:
 		        	if(!formas.empty()){
-						printf("Rotacao\n");
+						printf("Rotacao de %d graus para a esquerda\n", angulo);
 						rotacao(anguloEmRadianos);
 					}
 		            break;
@@ -276,12 +276,12 @@ void keyboard(unsigned char key, int x, int y){
 		        case TRA:
 		            if(!formas.empty()){
 						printf("Translacao para direita\n");
-		            	translacao(25, 0);
+		            	translacao(deslocamento, 0);
 					} 
 		            break;
 		        case ROT:
 		        	if(!formas.empty()){
-						printf("Rotacao\n");
+						printf("Rotacao de %d graus para a direita\n", angulo);
 						rotacao(anguloEmRadianos);
 					}
 		            break;
@@ -358,20 +358,19 @@ void mouse(int button, int state, int x, int y){
 
 vertice calcularCentroide(forma& f) {
 	int somaX = 0, somaY = 0, n = 0, i = 0;
-		
+	
 	for(forward_list<vertice>::iterator v = f.v.begin(); v != f.v.end(); v++, i++){
         somaX += v->x;
         somaY += v->y;
         ++n;
     }
-	  
+ 
 	if (n == 0) return vertice{0, 0}; // Retorna {0, 0} se não houver vértices
  	 return vertice{somaX / n, somaY / n}; // Retorna o centroide calculado	
 }
 
-
 void multiplicarMatrizes(double a[3][3], double b[3][3], double resultado[3][3]) {
-    // Inicializando a matriz resultado com zeros
+	// Inicializar matriz resultado
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
             resultado[i][j] = 0;
@@ -389,37 +388,30 @@ void multiplicarMatrizes(double a[3][3], double b[3][3], double resultado[3][3])
 }
 
 void imprimirMatriz(double matriz[3][3]) {
-    printf("Matriz:\n");
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
             printf("%.1f ", matriz[i][j]);
         }
-        printf("\n"); // Nova linha após cada linha da matriz
+        printf("\n");
     }
 }
 
 void multiplicarVetorPorMatriz(const double vetor[3], const double matriz[3][3], double resultado[3]) {
     for (int i = 0; i < 3; ++i) {
-        printf("elemento %d\n", i);
-        resultado[i] = 0; // Inicializa o resultado
+        resultado[i] = 0;
         for (int j = 0; j < 3; j++) {
-            printf("%.2f * %.2f = %.2f\n", vetor[j], matriz[j][i], vetor[j] * matriz[j][i]);
-            resultado[i] += vetor[j] * matriz[j][i]; // Corrigido para usar 'i' aqui
+            resultado[i] += vetor[j] * matriz[j][i];
         }
-        printf("Resultado[%d] = %.2f\n", i, resultado[i]);
-        printf("\n");
     }
 }
 
-
-
-
 void rotacao(float angulo){
 	int i = 0;
+	
+	// Para cada forma, obter a matriz de transformacao final após calcular o centróide da forma
 	for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
 		vertice centroide = calcularCentroide(*f); 		// Chama a função e obtém um vertice
-		// printf("Centroide: (%d, %d)\n", centroide.x, centroide.y); 	// Exibe o centroide
-		
+				
 		double transladaParaOrigem[3][3] = {
 		    {1.0, 0.0, 0.0}, 
 		    {0.0, 1.0, 0.0},
@@ -444,51 +436,38 @@ void rotacao(float angulo){
 		double matrizFinal[3][3];
 		multiplicarMatrizes(rotacaoComTranslacao, transladaDeVolta, matrizFinal);
 		
+		printf("Matriz de transformacao:\n");
+	    imprimirMatriz(matrizFinal);
+	    printf("\n");
+		
+		// Para cada vértice, obter o vértice após a rotação multiplicando suas coordenadas pela matriz de transformação
 		for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
 	        double coordHomogenea[3] = {(double)v->x, (double)v->y, 1.0};
 	        double resultado[3];
 			multiplicarVetorPorMatriz(coordHomogenea, matrizFinal, resultado);
-	
-			printf("Vertice original\n");
-			for (int i = 0; i < 3; ++i) {
-		        printf("original[%d] = %.2f\n", i, coordHomogenea[i]); // Imprime o resultado formatado
-		    }
-		    printf("\n");
-			
-			printf("Matriz final\n");
-		    imprimirMatriz(matrizFinal);
-		    printf("\n");
 		    
-			printf("Resultado:\n");
-			for (int i = 0; i < 3; ++i) {
-		        printf("final[%d] = %.2f\n", i, resultado[i]); // Imprime o resultado formatado
-		    }
-		    printf("\n");
+		    printf("(%d, %d) -> (%d, %d)\n", v->x, v->y, (int)round(resultado[0]), (int)round(resultado[1]));
 			
 	        // Atualiza as coordenadas do vértice
 	        v->x = resultado[0];
 	        v->y = resultado[1];
 		}
+		printf("\n");
 	}
 }
 
-
-// Transformacoes
 void translacao(int dx, int dy){
 	int i = 0;
 	
 	for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
 		for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
-		    v->x += dx;  // Move o vértice na direção x
-		    v->y += dy;
-			printf("Novo valor de x: %d, Novo valor de y: %d\n", v->x, v->y);
+			printf("(%d, %d) -> (%d, %d)\n", v->x, v->y, v->x+dx, v->y+dy);
+			v->x += dx;  // Move o vértice na direção x
+		    v->y += dy;	 // Move o vértice na direção y
 		}
+		printf("\n");
 	}
-	
-	printf("\n");
-	
 }	
-
 
 // Controle da posicao do cursor do mouse
 void mousePassiveMotion(int x, int y){
@@ -606,7 +585,6 @@ void algoritmoBresenham(double x1, double y1, double x2, double y2) {
             y += sinal_y;
             desvio += incNE;
         }
-        
         drawPixel((int)x, (int)y);
     }
 }
