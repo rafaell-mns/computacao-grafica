@@ -30,6 +30,7 @@ using namespace std;
 
 //Enumeracao com os tipos de formas geometricas
 enum tipo_forma{LIN = 1, QUA = 2, TRI = 3, POL, CIR }; // Linha, Triangulo, Retangulo Poligono, Circulo
+enum tipo_transf{TRA = 6, ROT = 7};
 
 //Verifica se foi realizado o primeiro clique do mouse
 bool click1 = false, click2 = false;
@@ -140,15 +141,28 @@ int main(int argc, char** argv){
     glutPassiveMotionFunc(mousePassiveMotion); //fucao callback do movimento passivo do mouse
     glutDisplayFunc(display); //funcao callback de desenho
     
-    // Define o menu pop-up
-    glutCreateMenu(menu_popup);
+    // Sub menu
+    int menu_desenhar = glutCreateMenu(menu_popup);
     glutAddMenuEntry("Linha", LIN);
 	glutAddMenuEntry("Quadrilatero", QUA);
 	glutAddMenuEntry("Triangulo", TRI);
-    glutAddMenuEntry("Sair", 0);
-    glutAttachMenu(GLUT_RIGHT_BUTTON);
+	
+	int menu_transformacao = glutCreateMenu(menu_popup);
+	glutAddMenuEntry("Translacao", TRA);
+	glutAddMenuEntry("Rotacao", ROT);
+	
+	// Menu principal
+	glutCreateMenu(menu_popup);
+	glutAddSubMenu("Desenhar", menu_desenhar);
+	glutAddSubMenu("Transformar", menu_transformacao);
+	glutAddMenuEntry("Sair", 0);
+	
+	glutAttachMenu(GLUT_RIGHT_BUTTON);
+	
+	printf("Teclas:\n");
+	printf("  'C' - Limpar a tela\n");
+	printf("  'Z' - Apagar a ultima forma desenhada\n\n");
 
-	printf("Pressione 'C' para limpar a tela e 'Z' para apagar a última forma desenhada.\n\n");
     glutMainLoop(); // executa o loop do OpenGL
     return EXIT_SUCCESS; // retorna 0 para o tipo inteiro da funcao main();
 }
@@ -209,12 +223,16 @@ void keyboard(unsigned char key, int x, int y){
         case 'c':
         case 'C':
             formas.clear();
+            printf("Tela limpada!\n\n");
             glutPostRedisplay();
             break;
         case 'z':
 	    case 'Z':
-	    	if(!formas.empty()) formas.pop_front();
-	    	glutPostRedisplay();
+	    	if(!formas.empty()){
+			  formas.pop_front();
+	    	  printf("Ultima forma desfeita!\n\n");
+			  glutPostRedisplay();	
+			} 
             break;
     }
 }
