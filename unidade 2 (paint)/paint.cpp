@@ -18,7 +18,6 @@
 
 #include <cmath>
 #include <cstdio>
-#include <iostream>
 #include <vector>
 #include <cstdlib>
 #include <forward_list>
@@ -31,18 +30,17 @@ using namespace std;
 #define PI 3.14159265358979323846 // Definindo o valor de PI manualmente
 
 //Enumeracao com os tipos de formas geometricas
-enum tipo_forma{LIN = 1, QUA = 2, TRI = 3, POL = 4, CIR = 5}; // Linha, Triangulo, Retangulo Poligono, Circulo
+enum tipo_forma{LIN = 1, RET = 2, TRI = 3, POL = 4, CIR = 5}; // Linha, Triangulo, Retangulo Poligono, Circulo
 enum tipo_transf{TRA = 6, ROT = 7, ESCA = 8, CIS = 9, REF = 10};
-enum personalizar_transf{pTRA = 11, pROT = 12, pESCA = 13, pCIS = 14};
 
 // Verificacoes booleanas
 bool click1 = false, click2 = false; 	// clique do mouse
+bool poligonoIniciado = false;
+int n = 2;
 
 // Coordenadas do mouse
 int m_x, m_y; 							// posicao atual do mouse
 int x_1, y_1, x_2, y_2, x_3, y_3;		// posicao de cada clique
-int n = 2;								// quantidade cliques mouse para poligono de n lados
-std::vector<int> verticesPoligono;		// vetor que armazena os vértices do polígono para salvar no pushVertice
 
 // Indica o tipo de forma geometrica e tipo de operacao ativa para desenhar
 int modo = LIN;
@@ -88,8 +86,8 @@ void pushLinha(int x1, int y1, int x2, int y2){
     pushVertice(x2, y2);
 }
 
-void pushQuadrilatero(int x1, int y1, int x2, int y2){
-	pushForma(QUA);
+void pushRetangulo(int x1, int y1, int x2, int y2){
+	pushForma(RET);
 	pushVertice(x1, y1); // vertice 1
     pushVertice(x2, y2); // vertice 2
     pushVertice(x2, y1); // vertice 3
@@ -149,7 +147,7 @@ int main(int argc, char** argv){
     // Sub menus
     int menu_desenhar = glutCreateMenu(menu_popup);
     glutAddMenuEntry("Linha", LIN);
-	glutAddMenuEntry("Quadrilatero", QUA);
+	glutAddMenuEntry("Retangulo", RET);
 	glutAddMenuEntry("Triangulo", TRI);
 	glutAddMenuEntry("Poligono", POL);
 	
@@ -159,23 +157,17 @@ int main(int argc, char** argv){
 	glutAddMenuEntry("Escala", ESCA);
 	glutAddMenuEntry("Cisalhamento", CIS);
 	glutAddMenuEntry("Reflexao", REF);
-				
-	int menu_personalizar = glutCreateMenu(menu_popup);
-	glutAddMenuEntry("Deslocamento da Translacao", pTRA);
-	glutAddMenuEntry("Angulo Rotacao", pROT);
-	glutAddMenuEntry("Fator de Escala", pESCA);
-	glutAddMenuEntry("Fator de Cisalhamento", pCIS);
 	
 	// Menu principal
 	glutCreateMenu(menu_popup);
 	glutAddSubMenu("Desenhar", menu_desenhar);
 	glutAddSubMenu("Transformar", menu_transformacao);
-	glutAddSubMenu("Personalizar valores transformacao", menu_personalizar);
 	glutAddMenuEntry("Sair", 0);
 	glutAttachMenu(GLUT_RIGHT_BUTTON);
 	
+	printf("=================================================================\n");
 	printf("Por padrao, LINHA e TRANSLACAO estao previamente selecionados\n\n");
-	printf("Teclas:\n");
+	printf("Teclas disponiveis:\n");
 	printf("  'C' - Limpar a tela\n");
 	printf("  'Z' - Apagar a ultima forma desenhada\n\n");
 	printf("Transformacoes (apos selecionar no menu):\n");
@@ -184,6 +176,7 @@ int main(int argc, char** argv){
 	printf("  'WS' - Aumentar/diminuir a escala\n");
 	printf("  'XY' - Cisalhamento no eixo X ou Y\n");
 	printf("  'XYO' - Reflexao sobre o eixo X, o eixo Y ou a origem do sistema\n");
+	printf("=================================================================\n");
 	printf("\n");
 
     glutMainLoop(); 			// executa o loop do OpenGL
@@ -235,12 +228,11 @@ void menu_popup(int value){
 	}
 }
 
-int dx = 30, dy = 30;
-int angulo = 45.0; // ângulo em graus
-float anguloEmRadianos = angulo * (PI / 180.0);
-float fatorEscala = 2;
-float Cx = 3.5;
-float Cy = 1.5;
+int dx = 30, dy = 30;							// Deslocamento (em pixels) para translação						
+int angulo = 45.0; 								// Ângulo (em graus) de rotação
+float anguloEmRad = angulo * (PI / 180.0);
+float fatorEscala = 2;							// Fator de escala
+float Cx = 3.5, Cy = 1.5;						// Fator de cisalhamento nos eixos X e Y
 
 // Controle das teclas comuns do teclado
 void keyboard(unsigned char key, int x, int y){
@@ -324,7 +316,7 @@ void keyboard(unsigned char key, int x, int y){
 				case ROT:
 		        	if(!formas.empty()){
 						printf("Rotacao de %d graus\n", angulo);
-						rotacao(anguloEmRadianos);
+						rotacao(anguloEmRad);
 					}
 		            break;
 			}
@@ -374,8 +366,6 @@ void keyboard(unsigned char key, int x, int y){
     }
 }
 
-int primeiro_x, primeiro_y;
-bool poligono_iniciado = false;
 // Controle dos botoes do mouse
 void mouse(int button, int state, int x, int y){
     switch (button) {
@@ -399,20 +389,20 @@ void mouse(int button, int state, int x, int y){
                         }
                     }
                 	break;
-            	case QUA:
+            	case RET:
             		if (state == GLUT_DOWN) {
 				        if (click1) {
 				            x_2 = x;
 				            y_2 = height - y - 1; 
 				            printf("Clique 2 (%d, %d)\n\n", x_2, y_2);
-				            pushQuadrilatero(x_1, y_1, x_2, y_2);
+				            pushRetangulo(x_1, y_1, x_2, y_2);
 				            click1 = false;
 				            glutPostRedisplay();
 				        } else {
 				        	click1 = true;
 				            x_1 = x;
 				            y_1 = height - y - 1; 
-				            printf("Quadrilatero\nClique 1 (%d, %d)\n", x_1, y_1);
+				            printf("Retangulo\nClique 1 (%d, %d)\n", x_1, y_1);
 				        }
 			    	}
    					break;
@@ -439,35 +429,33 @@ void mouse(int button, int state, int x, int y){
 					break;
 				case POL:
 				    if (state == GLUT_DOWN) {
-				        int y_real = height - y - 1; // Ajuste da coordenada Y
-
-		                if (!poligono_iniciado) {
-		                    // Primeiro clique: inicializa o polígono
-		                    poligono_iniciado = true;
+		                if (!poligonoIniciado) {
+		                	x_1 = x;
+	   	   	   	   	    	y_1 = height - y - 1;
+		                    click1 = true;
+		                    poligonoIniciado = true;
 		                    pushForma(POL);
-		                    pushVertice(x, y_real);
-		                    
-		                    // Salva as coordenadas do primeiro ponto
-		                    primeiro_x = x;
-		                    primeiro_y = y_real;
-		
-		                    printf("Polígono iniciado com o primeiro ponto (%d, %d)\n", x, y_real);
+		                    pushVertice(x_1, y_1);
+		                    printf("Poligono\nClique 1 (%d, %d)\n", x_1, y_1);
 		                } else {
+		                	x_2 = x;
+		                	y_2 = height - y - 1; 
+		                	click1 = false;
+		                	
 		                    // Calcula a distância entre o ponto atual e o primeiro ponto
-		                    int distX = abs(primeiro_x - x);
-		                    int distY = abs(primeiro_y - y_real);
-		                    const int tolerancia = 10;
+		                    int distX = abs(x_1 - x_2);
+		                    int distY = abs(y_1 - y_2);
+		                    int tolerancia = 10;
 		
 		                    if (distX < tolerancia && distY < tolerancia) {
-		                        // Fechar o polígono quando o ponto atual estiver próximo ao primeiro
-		                        printf("Polígono fechado com o último ponto próximo ao primeiro ponto.\n");
-		                        poligono_iniciado = false; // Reset para o próximo polígono
-		                        glutPostRedisplay();
+		                        printf("Poligono fechado\n\n");
+		                        poligonoIniciado = false; 		// Reset para o próximo
+		                        n = 2;							// Reset para o próximo
+		                        click1 = false;
 		                    } else {
-		                        // Adiciona o novo ponto ao polígono
-		                        pushVertice(x, y_real);
-		                        printf("Ponto adicionado ao polígono (%d, %d)\n", x, y_real);
-		                        glutPostRedisplay();
+		                        pushVertice(x_2, y_2);
+		                        printf("Clique %d (%d, %d)\n", n++, x_2, y_2);
+		                        
 		                    }
 		                }
 		            }
@@ -662,7 +650,7 @@ void drawFormas(){
 	if (modo == LIN){
     	if(click1) algoritmoBresenham(x_1, y_1, m_x, m_y);
 	}
-	if (modo == QUA) {
+	if (modo == RET) {
         if (click1) {
             algoritmoBresenham(x_1, y_1, m_x, y_1); // Superior
             algoritmoBresenham(m_x, y_1, m_x, m_y); // Direita
@@ -678,12 +666,10 @@ void drawFormas(){
 		}
 	}
 	if (modo == POL){
-		if (click1) {
-	        int ultimoX = verticesPoligono[verticesPoligono.size() - 2]; // Último ponto x
-	        int ultimoY = verticesPoligono[verticesPoligono.size() - 1]; // Último ponto y
-	        
-	        algoritmoBresenham(ultimoX, ultimoY, m_x, m_y); // Desenha a linha do último ponto ao mouse
-    	}
+		if (poligonoIniciado){
+			if (click1) algoritmoBresenham(x_1, y_1, m_x, m_y);
+			else algoritmoBresenham(x_2, y_2, m_x, m_y);
+		}	
 	}
     
     //Percorre a lista de formas geometricas para desenhar
@@ -701,13 +687,13 @@ void drawFormas(){
                 algoritmoBresenham(x[0], y[0], x[1], y[1]);
                 
             	break;
-			case QUA:
+			case RET:
 				for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
                     x.push_back(v->x);
                     y.push_back(v->y);
                 }
                 
-            	// Desenha quadrilatero
+            	// Desenha retangulo
                 algoritmoBresenham(x[0], y[0], x[2], y[2]); // superior
 				algoritmoBresenham(x[2], y[2], x[1], y[1]); // direita
 				algoritmoBresenham(x[1], y[1], x[3], y[3]); // inferior
@@ -724,7 +710,7 @@ void drawFormas(){
         		algoritmoBresenham(x[0], y[0], x[2], y[2]);
         		break;
         	case POL:
-			    for (auto v = f->v.begin(); v != f->v.end(); v++, i++) {
+			    for (forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++) {
 			        x.push_back(v->x);
 			        y.push_back(v->y);
 			    }
@@ -736,6 +722,7 @@ void drawFormas(){
 			        int y2 = y[(i + 1) % n];
 			        algoritmoBresenham(x1, y1, x2, y2);
 			    }
+		        
 			    break;
 
                 
