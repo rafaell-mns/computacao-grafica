@@ -15,7 +15,7 @@
     #include <GL/gl.h>
     #include <GL/glu.h>
 #endif
-#define PI 3.14159265358979323846 // Definindo \pi manualmente
+
 #include <cmath>
 #include <cstdio>
 #include <vector>
@@ -27,10 +27,11 @@ using namespace std;
 
 // Variaveis Globais
 #define ESC 27
+#define PI 3.14159265358979323846 // Definindo o valor de PI manualmente
 
 //Enumeracao com os tipos de formas geometricas
 enum tipo_forma{LIN = 1, QUA = 2, TRI = 3, POL = 4, CIR = 5}; // Linha, Triangulo, Retangulo Poligono, Circulo
-enum tipo_transf{TRA = 6, ROT = 7};
+enum tipo_transf{TRA = 6, ROT = 7, ESCA = 8, CIS = 9, REF = 10};
 
 // Verificacoes booleanas
 bool click1 = false, click2 = false; 	// clique do mouse
@@ -118,7 +119,10 @@ void mousePassiveMotion(int x, int y);
 void drawPixel(int x, int y);
 void drawFormas();	// Funcao que percorre a lista de formas geometricas, desenhando-as na tela
 void translacao(int dx, int dy);		// Declara translacao
-void rotacao(float angulo);							// Declara rotacao
+void rotacao(float angulo);				// Declara rotacao
+void escala(float Sx, float Sy);		// Declara escala
+void cisalhamento(float Cx, float Cy);	// Declara cisalhamento
+void reflexao(int Rx, int Ry);					// Declara reflexao		
 void algoritmoBresenham (double x1,double y1,double x2,double y2);
 
 
@@ -144,7 +148,10 @@ int main(int argc, char** argv){
 	int menu_transformacao = glutCreateMenu(menu_popup);
 	glutAddMenuEntry("Translacao", TRA);
 	glutAddMenuEntry("Rotacao", ROT);
-	
+	glutAddMenuEntry("Escala", ESCA);
+	glutAddMenuEntry("Cisalhamento", CIS);
+	glutAddMenuEntry("Reflexao", REF);
+				
 	// Menu principal
 	glutCreateMenu(menu_popup);
 	glutAddSubMenu("Desenhar", menu_desenhar);
@@ -155,8 +162,14 @@ int main(int argc, char** argv){
 	printf("Por padrao, LINHA e TRANSLACAO estao previamente selecionados\n\n");
 	printf("Teclas:\n");
 	printf("  'C' - Limpar a tela\n");
-	printf("  'Z' - Apagar a ultima forma desenhada\n");
-	printf("  'WASD' - Controlar a translacao\n\n");
+	printf("  'Z' - Apagar a ultima forma desenhada\n\n");
+	printf("Transformacoes (apos selecionar no menu):\n");
+	printf("  'WASD' - Direcao da translacao\n");
+	printf("  'AD' - Rotacao para esquerda/direita\n");
+	printf("  'WS' - Aumentar/diminuir a escala\n");
+	printf("  'XY' - Cisalhamento no eixo X ou Y\n");
+	printf("  'XYO' - Reflexao sobre o eixo X, o eixo Y ou a origem do sistema\n");
+	printf("\n");
 
     glutMainLoop(); 			// executa o loop do OpenGL
     return EXIT_SUCCESS; 		// retorna 0 para o tipo inteiro da funcao main();
@@ -210,6 +223,9 @@ void menu_popup(int value){
 int deslocamento = 30;
 int angulo = 45.0; // ângulo em graus
 float anguloEmRadianos = angulo * (PI / 180.0);
+float fatorEscala = 2;
+float Cx = 3.5;
+float Cy = 1.5;
 
 // Controle das teclas comuns do teclado
 void keyboard(unsigned char key, int x, int y){
@@ -240,6 +256,12 @@ void keyboard(unsigned char key, int x, int y){
 		            	translacao(0, deslocamento);
 					} 
 		            break;
+		        case ESCA:
+		        	if(!formas.empty()){
+		        		printf("Formas aumentadas em 2x\n");
+		        		escala(fatorEscala,fatorEscala);
+					
+					}
 		    }
 		    break;
 		case 'S':
@@ -251,6 +273,12 @@ void keyboard(unsigned char key, int x, int y){
 		            	translacao(0, -deslocamento);
 					} 
 		            break;
+		        case ESCA:
+		        	if(!formas.empty()){
+		        		printf("Formas diminuidas em 2x\n");
+		        		escala(1/fatorEscala, 1/fatorEscala);
+					}
+					break;
 		    }
 		    break;
         case 'A':
@@ -287,6 +315,48 @@ void keyboard(unsigned char key, int x, int y){
 		            break;
 		    }
 		    break;
+		case 'X':
+        case 'x':
+        	switch (operacao){
+				case CIS:
+					if(!formas.empty()){
+						printf("Cisalhamento de %.1f no eixo X\n", Cx);
+		            	cisalhamento(Cx, 0);
+					} 
+					break;
+				case REF:
+					if(!formas.empty()){
+						printf("Reflexao sobre o eixo X\n");
+						reflexao(1, -1);
+					}
+			}
+			break;
+	    case 'Y':
+	    case 'y':
+	    	switch (operacao){
+				case CIS:
+					if(!formas.empty()){
+						printf("Cisalhamento de %.1f no eixo Y\n", Cy);
+		            	cisalhamento(0, Cy);
+					} 
+					break;
+				case REF:
+					if(!formas.empty()){
+						printf("Reflexao sobre o eixo Y\n");
+						reflexao(-1, 1);
+					}
+			}
+			break;
+		case 'O':
+        case 'o':
+        	switch(operacao){
+				case REF:
+					if(!formas.empty()){
+						printf("Reflexao sobre a origem\n");
+						reflexao(-1, -1);
+					}
+			}
+			break;
     }
 }
 
@@ -403,6 +473,153 @@ void multiplicarVetorPorMatriz(const double vetor[3], const double matriz[3][3],
             resultado[i] += vetor[j] * matriz[j][i];
         }
     }
+}
+
+void reflexao(int Rx, int Ry){
+	int i = 0;
+	
+	// Para cada forma, obter a matriz de transformacao final após calcular o centróide da forma
+	for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
+		vertice centroide = calcularCentroide(*f); 		// Chama a função e obtém um vertice
+		
+		double transladaParaOrigem[3][3] = {
+		    {1.0, 0.0, 0.0}, 
+		    {0.0, 1.0, 0.0},
+		    {-(double)centroide.x, -(double)centroide.y, 1.0}
+		};
+		
+		double matrixReflexao[3][3] = {
+			{(double)Rx, 0.0, 0.0}, 
+		    {0.0, (double)Ry, 0.0},
+		    {0.0, 0.0, 1.0} 	
+		};	
+	
+		double reflexaoOrigem[3][3];
+		multiplicarMatrizes(transladaParaOrigem, matrixReflexao, reflexaoOrigem);
+		
+		double transladaDeVolta[3][3] = {
+		    {1.0, 0.0, 0.0},
+		    {0.0, 1.0, 0.0},
+		    {(double)centroide.x, (double)centroide.y, 1.0}
+		};
+		
+		double reflexaoFinal[3][3];
+		multiplicarMatrizes(reflexaoOrigem, transladaDeVolta, reflexaoFinal);
+		
+
+		
+		// Para cada vértice, obter o vértice após a reflexão multiplicando suas coordenadas pela matriz de transformação
+		for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
+	        double coordHomogenea[3] = {(double)v->x, (double)v->y, 1.0};
+	        double resultado[3];
+	        
+	        multiplicarVetorPorMatriz(coordHomogenea, reflexaoFinal, resultado);
+	        
+	        printf("(%d, %d) -> (%d, %d)\n", v->x, v->y, (int)round(resultado[0]), (int)round(resultado[1]));
+			
+	        // Atualiza as coordenadas do vértice
+	        v->x = resultado[0];
+	        v->y = resultado[1];
+		}
+		printf("\n");
+	
+	}
+}
+
+void cisalhamento(float Cx, float Cy){
+	int i = 0;
+	
+	// Para cada forma, obter a matriz de transformacao final após calcular o centróide da forma
+	for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
+		vertice centroide = calcularCentroide(*f); 		// Chama a função e obtém um vertice
+		
+		double transladaParaOrigem[3][3] = {
+		    {1.0, 0.0, 0.0}, 
+		    {0.0, 1.0, 0.0},
+		    {-(double)centroide.x, -(double)centroide.y, 1.0}
+		};
+		
+		double matrizCisalhamento[3][3] = {
+			{1.0, Cy, 0.0}, 
+		    {Cx, 1.0, 0.0},
+		    {0.0, 0.0, 1.0} 
+   	   };
+   	   
+   	   double cisalhamentoOrigem[3][3];
+   	   multiplicarMatrizes(transladaParaOrigem, matrizCisalhamento, cisalhamentoOrigem);
+   	   
+   	   double transladaDeVolta[3][3] = {
+		    {1.0, 0.0, 0.0},
+		    {0.0, 1.0, 0.0},
+		    {(double)centroide.x, (double)centroide.y, 1.0}
+		};
+		
+		double cisalhamentoFinal[3][3];
+		multiplicarMatrizes(cisalhamentoOrigem, transladaDeVolta, cisalhamentoFinal);
+		
+		// Para cada vértice, obter o vértice após o cisalhamento multiplicando suas coordenadas pela matriz de transformação
+		for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
+	        double coordHomogenea[3] = {(double)v->x, (double)v->y, 1.0};
+	        double resultado[3];
+	        
+	        multiplicarVetorPorMatriz(coordHomogenea, cisalhamentoFinal, resultado);
+	        
+	        printf("(%d, %d) -> (%d, %d)\n", v->x, v->y, (int)round(resultado[0]), (int)round(resultado[1]));
+			
+	        // Atualiza as coordenadas do vértice
+	        v->x = resultado[0];
+	        v->y = resultado[1];
+		}
+		printf("\n");
+	}
+}
+
+void escala(float Sx, float Sy){
+	int i = 0;
+	
+	// Para cada forma, obter a matriz de transformacao final após calcular o centróide da forma
+	for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
+		vertice centroide = calcularCentroide(*f); 		// Chama a função e obtém um vertice
+				
+		double transladaParaOrigem[3][3] = {
+		    {1.0, 0.0, 0.0}, 
+		    {0.0, 1.0, 0.0},
+		    {-(double)centroide.x, -(double)centroide.y, 1.0}
+		};
+		
+		double matrizEscala[3][3] = {
+			{Sx, 0.0, 0.0}, 
+		    {0.0, Sy, 0.0},
+		    {0.0, 0.0, 1.0}
+   	   };
+   	   
+   	   double escalaOrigem[3][3];
+   	   multiplicarMatrizes(transladaParaOrigem, matrizEscala, escalaOrigem);
+   	   
+   	   double transladaDeVolta[3][3] = {
+		    {1.0, 0.0, 0.0},
+		    {0.0, 1.0, 0.0},
+		    {(double)centroide.x, (double)centroide.y, 1.0}
+		};
+		
+		double escalaVolta[3][3];
+		multiplicarMatrizes(escalaOrigem, transladaDeVolta, escalaVolta);
+		
+		// Para cada vértice, obter o vértice após a escala multiplicando suas coordenadas pela matriz de transformação
+		for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
+	        double coordHomogenea[3] = {(double)v->x, (double)v->y, 1.0};
+	        double resultado[3];
+			multiplicarVetorPorMatriz(coordHomogenea, escalaVolta, resultado);
+		    
+		    printf("(%d, %d) -> (%d, %d)\n", v->x, v->y, (int)round(resultado[0]), (int)round(resultado[1]));
+			
+	        // Atualiza as coordenadas do vértice
+	        v->x = resultado[0];
+	        v->y = resultado[1];
+		}
+		printf("\n");	
+	
+	}
 }
 
 void rotacao(float angulo){
