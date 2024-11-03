@@ -18,6 +18,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <iostream>
 #include <vector>
 #include <cstdlib>
 #include <forward_list>
@@ -32,6 +33,7 @@ using namespace std;
 //Enumeracao com os tipos de formas geometricas
 enum tipo_forma{LIN = 1, QUA = 2, TRI = 3, POL = 4, CIR = 5}; // Linha, Triangulo, Retangulo Poligono, Circulo
 enum tipo_transf{TRA = 6, ROT = 7, ESCA = 8, CIS = 9, REF = 10};
+enum personalizar_transf{pTRA = 11, pROT = 12, pESCA = 13, pCIS = 14};
 
 // Verificacoes booleanas
 bool click1 = false, click2 = false; 	// clique do mouse
@@ -39,6 +41,8 @@ bool click1 = false, click2 = false; 	// clique do mouse
 // Coordenadas do mouse
 int m_x, m_y; 							// posicao atual do mouse
 int x_1, y_1, x_2, y_2, x_3, y_3;		// posicao de cada clique
+int n = 2;								// quantidade cliques mouse para poligono de n lados
+std::vector<int> verticesPoligono;		// vetor que armazena os vértices do polígono para salvar no pushVertice
 
 // Indica o tipo de forma geometrica e tipo de operacao ativa para desenhar
 int modo = LIN;
@@ -108,6 +112,8 @@ void pushTriangulo(int x1, int y1, int x2, int y2, int x3, int y3){
     pushVertice(x3, y3);
 }
 
+
+
 // Declaracoes antecipadas (forward) das funcoes (assinaturas das funcoes)
 void init(void);
 void reshape(int w, int h);
@@ -145,6 +151,8 @@ int main(int argc, char** argv){
     glutAddMenuEntry("Linha", LIN);
 	glutAddMenuEntry("Quadrilatero", QUA);
 	glutAddMenuEntry("Triangulo", TRI);
+	glutAddMenuEntry("Poligono", POL);
+	
 	int menu_transformacao = glutCreateMenu(menu_popup);
 	glutAddMenuEntry("Translacao", TRA);
 	glutAddMenuEntry("Rotacao", ROT);
@@ -152,10 +160,17 @@ int main(int argc, char** argv){
 	glutAddMenuEntry("Cisalhamento", CIS);
 	glutAddMenuEntry("Reflexao", REF);
 				
+	int menu_personalizar = glutCreateMenu(menu_popup);
+	glutAddMenuEntry("Deslocamento da Translacao", pTRA);
+	glutAddMenuEntry("Angulo Rotacao", pROT);
+	glutAddMenuEntry("Fator de Escala", pESCA);
+	glutAddMenuEntry("Fator de Cisalhamento", pCIS);
+	
 	// Menu principal
 	glutCreateMenu(menu_popup);
 	glutAddSubMenu("Desenhar", menu_desenhar);
 	glutAddSubMenu("Transformar", menu_transformacao);
+	glutAddSubMenu("Personalizar valores transformacao", menu_personalizar);
 	glutAddMenuEntry("Sair", 0);
 	glutAttachMenu(GLUT_RIGHT_BUTTON);
 	
@@ -220,7 +235,7 @@ void menu_popup(int value){
 	}
 }
 
-int deslocamento = 30;
+int dx = 30, dy = 30;
 int angulo = 45.0; // ângulo em graus
 float anguloEmRadianos = angulo * (PI / 180.0);
 float fatorEscala = 2;
@@ -252,13 +267,13 @@ void keyboard(unsigned char key, int x, int y){
 		    switch (operacao) {
 		        case TRA:
 		            if(!formas.empty()){
-						printf("Translacao para cima\n");
-		            	translacao(0, deslocamento);
+						printf("Translacao de %d pixels para cima\n", dy);
+		            	translacao(0, dy);
 					} 
 		            break;
 		        case ESCA:
 		        	if(!formas.empty()){
-		        		printf("Formas aumentadas em 2x\n");
+		        		printf("Formas aumentadas em %.1fx\n", fatorEscala);
 		        		escala(fatorEscala,fatorEscala);
 					
 					}
@@ -269,13 +284,13 @@ void keyboard(unsigned char key, int x, int y){
         	switch (operacao) {
 		        case TRA:
 		            if(!formas.empty()){
-						printf("Translacao para baixo\n");
-		            	translacao(0, -deslocamento);
+						printf("Translacao de %d pixels para baixo\n", dy);
+		            	translacao(0, -dy);
 					} 
 		            break;
 		        case ESCA:
 		        	if(!formas.empty()){
-		        		printf("Formas diminuidas em 2x\n");
+		        		printf("Formas diminuidas em 1/%.1fx\n", fatorEscala);
 		        		escala(1/fatorEscala, 1/fatorEscala);
 					}
 					break;
@@ -286,8 +301,8 @@ void keyboard(unsigned char key, int x, int y){
         	switch (operacao) {
 		        case TRA:
 		            if(!formas.empty()){
-						printf("Translacao para esquerda\n");
-		            	translacao(-deslocamento, 0);
+						printf("Translacao de %d pixels para esquerda\n", dx);
+		            	translacao(-dx, 0);
 					} 
 		            break;
 		    }
@@ -297,8 +312,8 @@ void keyboard(unsigned char key, int x, int y){
         	switch (operacao) {
 		        case TRA:
 		            if(!formas.empty()){
-						printf("Translacao para direita\n");
-		            	translacao(deslocamento, 0);
+						printf("Translacao de %d pixels para direita\n", dx);
+		            	translacao(dx, 0);
 					} 
 		            break;
 		    }
@@ -359,6 +374,8 @@ void keyboard(unsigned char key, int x, int y){
     }
 }
 
+int primeiro_x, primeiro_y;
+bool poligono_iniciado = false;
 // Controle dos botoes do mouse
 void mouse(int button, int state, int x, int y){
     switch (button) {
@@ -420,9 +437,45 @@ void mouse(int button, int state, int x, int y){
 						}
 					} 
 					break;
-            }
+				case POL:
+				    if (state == GLUT_DOWN) {
+				        int y_real = height - y - 1; // Ajuste da coordenada Y
+
+		                if (!poligono_iniciado) {
+		                    // Primeiro clique: inicializa o polígono
+		                    poligono_iniciado = true;
+		                    pushForma(POL);
+		                    pushVertice(x, y_real);
+		                    
+		                    // Salva as coordenadas do primeiro ponto
+		                    primeiro_x = x;
+		                    primeiro_y = y_real;
+		
+		                    printf("Polígono iniciado com o primeiro ponto (%d, %d)\n", x, y_real);
+		                } else {
+		                    // Calcula a distância entre o ponto atual e o primeiro ponto
+		                    int distX = abs(primeiro_x - x);
+		                    int distY = abs(primeiro_y - y_real);
+		                    const int tolerancia = 10;
+		
+		                    if (distX < tolerancia && distY < tolerancia) {
+		                        // Fechar o polígono quando o ponto atual estiver próximo ao primeiro
+		                        printf("Polígono fechado com o último ponto próximo ao primeiro ponto.\n");
+		                        poligono_iniciado = false; // Reset para o próximo polígono
+		                        glutPostRedisplay();
+		                    } else {
+		                        // Adiciona o novo ponto ao polígono
+		                        pushVertice(x, y_real);
+		                        printf("Ponto adicionado ao polígono (%d, %d)\n", x, y_real);
+		                        glutPostRedisplay();
+		                    }
+		                }
+		            }
+		            break;
+   			
         
-    }
+    		}
+	}
 }
 
 vertice calcularCentroide(forma& f) {
@@ -624,6 +677,14 @@ void drawFormas(){
 			algoritmoBresenham(x_1, y_1, x_2, y_2);
 		}
 	}
+	if (modo == POL){
+		if (click1) {
+	        int ultimoX = verticesPoligono[verticesPoligono.size() - 2]; // Último ponto x
+	        int ultimoY = verticesPoligono[verticesPoligono.size() - 1]; // Último ponto y
+	        
+	        algoritmoBresenham(ultimoX, ultimoY, m_x, m_y); // Desenha a linha do último ponto ao mouse
+    	}
+	}
     
     //Percorre a lista de formas geometricas para desenhar
     for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
@@ -662,6 +723,22 @@ void drawFormas(){
 				algoritmoBresenham(x[1], y[1], x[2], y[2]);
         		algoritmoBresenham(x[0], y[0], x[2], y[2]);
         		break;
+        	case POL:
+			    for (auto v = f->v.begin(); v != f->v.end(); v++, i++) {
+			        x.push_back(v->x);
+			        y.push_back(v->y);
+			    }
+			    size_t n = x.size();
+			    for (size_t i = 0; i < n; i++) {
+			        int x1 = x[i];
+			        int y1 = y[i];
+			        int x2 = x[(i + 1) % n]; // Conecta o último ponto ao primeiro
+			        int y2 = y[(i + 1) % n];
+			        algoritmoBresenham(x1, y1, x2, y2);
+			    }
+			    break;
+
+                
         }
     }
 }
