@@ -165,7 +165,7 @@ int main(int argc, char** argv){
 	printf("  'Z' - Apagar a ultima forma desenhada\n\n");
 	printf("Transformacoes (apos selecionar no menu):\n");
 	printf("  'WASD' - Direcao da translacao\n");
-	printf("  'AD' - Rotacao para esquerda/direita\n");
+	printf("  'R' - Rotacao\n");
 	printf("  'WS' - Aumentar/diminuir a escala\n");
 	printf("  'XY' - Cisalhamento no eixo X ou Y\n");
 	printf("  'XYO' - Reflexao sobre o eixo X, o eixo Y ou a origem do sistema\n");
@@ -290,12 +290,6 @@ void keyboard(unsigned char key, int x, int y){
 		            	translacao(-deslocamento, 0);
 					} 
 		            break;
-		        case ROT:
-		        	if(!formas.empty()){
-						printf("Rotacao de %d graus para a esquerda\n", angulo);
-						rotacao(anguloEmRadianos);
-					}
-		            break;
 		    }
 		    break;
         case 'D':
@@ -307,14 +301,19 @@ void keyboard(unsigned char key, int x, int y){
 		            	translacao(deslocamento, 0);
 					} 
 		            break;
-		        case ROT:
+		    }
+		    break;
+		case 'R':
+        case 'r':
+        	switch(operacao){
+				case ROT:
 		        	if(!formas.empty()){
-						printf("Rotacao de %d graus para a direita\n", angulo);
+						printf("Rotacao de %d graus\n", angulo);
 						rotacao(anguloEmRadianos);
 					}
 		            break;
-		    }
-		    break;
+			}
+			break;
 		case 'X':
         case 'x':
         	switch (operacao){
@@ -475,201 +474,106 @@ void multiplicarVetorPorMatriz(const double vetor[3], const double matriz[3][3],
     }
 }
 
-void reflexao(int Rx, int Ry){
+void calcularMatrizTransformacao(vertice centroide, double operacao[3][3], double matrizTransformacao[3][3]) {
+	double transladaParaOrigem[3][3] = {
+        {1.0, 0.0, 0.0}, 
+        {0.0, 1.0, 0.0},
+        {-(double)centroide.x, -(double)centroide.y, 1.0}
+    };
+    
+    double transladaDeVolta[3][3] = {
+        {1.0, 0.0, 0.0},
+        {0.0, 1.0, 0.0},
+        {(double)centroide.x, (double)centroide.y, 1.0}
+    };
+    
+	double operacaoNaOrigem[3][3];
+    multiplicarMatrizes(transladaParaOrigem, operacao, operacaoNaOrigem); 			// realiza a operação na origem
+    multiplicarMatrizes(operacaoNaOrigem, transladaDeVolta, matrizTransformacao);	// retorna para onde estava
+}
+
+void aplicarTransformacaoVertices(forma& f, double matrizTransformacao[3][3]){
 	int i = 0;
+	for(forward_list<vertice>::iterator v = f.v.begin(); v != f.v.end(); v++, i++){
+		double coordHomogenea[3] = {(double)v->x, (double)v->y, 1.0}; // converte para coordenada homogênea
+		double verticeResultante[3];
+		
+		multiplicarVetorPorMatriz(coordHomogenea, matrizTransformacao, verticeResultante);
+		
+		printf("(%d, %d) -> (%d, %d)\n", v->x, v->y, (int)round(verticeResultante[0]), (int)round(verticeResultante[1]));
+			
+        // Atualiza as coordenadas do vértice
+        v->x = verticeResultante[0];
+        v->y = verticeResultante[1];
+	}
+	printf("\n");
+}
+
+void reflexao(int Rx, int Ry){
+	double matrizReflexao[3][3] = {
+			{(double)Rx, 0.0, 0.0}, 
+		    {0.0, (double)Ry, 0.0},
+		    {0.0, 0.0, 1.0} 	
+	};
 	
 	// Para cada forma, obter a matriz de transformacao final após calcular o centróide da forma
 	for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
 		vertice centroide = calcularCentroide(*f); 		// Chama a função e obtém um vertice
 		
-		double transladaParaOrigem[3][3] = {
-		    {1.0, 0.0, 0.0}, 
-		    {0.0, 1.0, 0.0},
-		    {-(double)centroide.x, -(double)centroide.y, 1.0}
-		};
-		
-		double matrixReflexao[3][3] = {
-			{(double)Rx, 0.0, 0.0}, 
-		    {0.0, (double)Ry, 0.0},
-		    {0.0, 0.0, 1.0} 	
-		};	
-	
-		double reflexaoOrigem[3][3];
-		multiplicarMatrizes(transladaParaOrigem, matrixReflexao, reflexaoOrigem);
-		
-		double transladaDeVolta[3][3] = {
-		    {1.0, 0.0, 0.0},
-		    {0.0, 1.0, 0.0},
-		    {(double)centroide.x, (double)centroide.y, 1.0}
-		};
-		
-		double reflexaoFinal[3][3];
-		multiplicarMatrizes(reflexaoOrigem, transladaDeVolta, reflexaoFinal);
-		
-
-		
-		// Para cada vértice, obter o vértice após a reflexão multiplicando suas coordenadas pela matriz de transformação
-		for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
-	        double coordHomogenea[3] = {(double)v->x, (double)v->y, 1.0};
-	        double resultado[3];
-	        
-	        multiplicarVetorPorMatriz(coordHomogenea, reflexaoFinal, resultado);
-	        
-	        printf("(%d, %d) -> (%d, %d)\n", v->x, v->y, (int)round(resultado[0]), (int)round(resultado[1]));
-			
-	        // Atualiza as coordenadas do vértice
-	        v->x = resultado[0];
-	        v->y = resultado[1];
-		}
-		printf("\n");
-	
+		double transformacaoReflexao[3][3];
+		calcularMatrizTransformacao(centroide, matrizReflexao, transformacaoReflexao);
+		aplicarTransformacaoVertices(*f, transformacaoReflexao);
 	}
 }
 
 void cisalhamento(float Cx, float Cy){
-	int i = 0;
+	double matrizCisalhamento[3][3] = {
+			{1.0, Cy, 0.0}, 
+		    {Cx, 1.0, 0.0},
+		    {0.0, 0.0, 1.0} 
+	};
 	
 	// Para cada forma, obter a matriz de transformacao final após calcular o centróide da forma
 	for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
 		vertice centroide = calcularCentroide(*f); 		// Chama a função e obtém um vertice
 		
-		double transladaParaOrigem[3][3] = {
-		    {1.0, 0.0, 0.0}, 
-		    {0.0, 1.0, 0.0},
-		    {-(double)centroide.x, -(double)centroide.y, 1.0}
-		};
-		
-		double matrizCisalhamento[3][3] = {
-			{1.0, Cy, 0.0}, 
-		    {Cx, 1.0, 0.0},
-		    {0.0, 0.0, 1.0} 
-   	   };
-   	   
-   	   double cisalhamentoOrigem[3][3];
-   	   multiplicarMatrizes(transladaParaOrigem, matrizCisalhamento, cisalhamentoOrigem);
-   	   
-   	   double transladaDeVolta[3][3] = {
-		    {1.0, 0.0, 0.0},
-		    {0.0, 1.0, 0.0},
-		    {(double)centroide.x, (double)centroide.y, 1.0}
-		};
-		
-		double cisalhamentoFinal[3][3];
-		multiplicarMatrizes(cisalhamentoOrigem, transladaDeVolta, cisalhamentoFinal);
-		
-		// Para cada vértice, obter o vértice após o cisalhamento multiplicando suas coordenadas pela matriz de transformação
-		for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
-	        double coordHomogenea[3] = {(double)v->x, (double)v->y, 1.0};
-	        double resultado[3];
-	        
-	        multiplicarVetorPorMatriz(coordHomogenea, cisalhamentoFinal, resultado);
-	        
-	        printf("(%d, %d) -> (%d, %d)\n", v->x, v->y, (int)round(resultado[0]), (int)round(resultado[1]));
-			
-	        // Atualiza as coordenadas do vértice
-	        v->x = resultado[0];
-	        v->y = resultado[1];
-		}
-		printf("\n");
+		double transformacaoCisalhamento[3][3];
+		calcularMatrizTransformacao(centroide, matrizCisalhamento, transformacaoCisalhamento);
+		aplicarTransformacaoVertices(*f, transformacaoCisalhamento);
 	}
 }
 
 void escala(float Sx, float Sy){
-	int i = 0;
+	double matrizEscala[3][3] = {
+			{Sx, 0.0, 0.0}, 
+		    {0.0, Sy, 0.0},
+		    {0.0, 0.0, 1.0}
+	};
 	
 	// Para cada forma, obter a matriz de transformacao final após calcular o centróide da forma
 	for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
 		vertice centroide = calcularCentroide(*f); 		// Chama a função e obtém um vertice
 				
-		double transladaParaOrigem[3][3] = {
-		    {1.0, 0.0, 0.0}, 
-		    {0.0, 1.0, 0.0},
-		    {-(double)centroide.x, -(double)centroide.y, 1.0}
-		};
-		
-		double matrizEscala[3][3] = {
-			{Sx, 0.0, 0.0}, 
-		    {0.0, Sy, 0.0},
-		    {0.0, 0.0, 1.0}
-   	   };
-   	   
-   	   double escalaOrigem[3][3];
-   	   multiplicarMatrizes(transladaParaOrigem, matrizEscala, escalaOrigem);
-   	   
-   	   double transladaDeVolta[3][3] = {
-		    {1.0, 0.0, 0.0},
-		    {0.0, 1.0, 0.0},
-		    {(double)centroide.x, (double)centroide.y, 1.0}
-		};
-		
-		double escalaVolta[3][3];
-		multiplicarMatrizes(escalaOrigem, transladaDeVolta, escalaVolta);
-		
-		// Para cada vértice, obter o vértice após a escala multiplicando suas coordenadas pela matriz de transformação
-		for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
-	        double coordHomogenea[3] = {(double)v->x, (double)v->y, 1.0};
-	        double resultado[3];
-			multiplicarVetorPorMatriz(coordHomogenea, escalaVolta, resultado);
-		    
-		    printf("(%d, %d) -> (%d, %d)\n", v->x, v->y, (int)round(resultado[0]), (int)round(resultado[1]));
-			
-	        // Atualiza as coordenadas do vértice
-	        v->x = resultado[0];
-	        v->y = resultado[1];
-		}
-		printf("\n");	
-	
+		double transformacaoEscala[3][3];
+		calcularMatrizTransformacao(centroide, matrizEscala, transformacaoEscala);
+		aplicarTransformacaoVertices(*f, transformacaoEscala);
 	}
 }
 
 void rotacao(float angulo){
-	int i = 0;
+	double matrizRotacao[3][3] = {
+			{std::cos(angulo), std::sin(angulo), 0.0},
+			{-std::sin(angulo), std::cos(angulo), 0.0},
+			{0.0, 0.0, 1.0}
+	};
 	
 	// Para cada forma, obter a matriz de transformacao final após calcular o centróide da forma
 	for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
 		vertice centroide = calcularCentroide(*f); 		// Chama a função e obtém um vertice
-				
-		double transladaParaOrigem[3][3] = {
-		    {1.0, 0.0, 0.0}, 
-		    {0.0, 1.0, 0.0},
-		    {-(double)centroide.x, -(double)centroide.y, 1.0}
-		};
 		
-		double matrizRotacao[3][3] = {
-			{std::cos(angulo), std::sin(angulo), 0.0},
-			{-std::sin(angulo), std::cos(angulo), 0.0},
-			{0.0, 0.0, 1.0}
-		};
-			
-		double rotacaoComTranslacao[3][3];
-	    multiplicarMatrizes(transladaParaOrigem, matrizRotacao, rotacaoComTranslacao);
-		
-		double transladaDeVolta[3][3] = {
-		    {1.0, 0.0, 0.0},
-		    {0.0, 1.0, 0.0},
-		    {(double)centroide.x, (double)centroide.y, 1.0}
-		};
-		
-		double matrizFinal[3][3];
-		multiplicarMatrizes(rotacaoComTranslacao, transladaDeVolta, matrizFinal);
-		
-		printf("Matriz de transformacao:\n");
-	    imprimirMatriz(matrizFinal);
-	    printf("\n");
-		
-		// Para cada vértice, obter o vértice após a rotação multiplicando suas coordenadas pela matriz de transformação
-		for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
-	        double coordHomogenea[3] = {(double)v->x, (double)v->y, 1.0};
-	        double resultado[3];
-			multiplicarVetorPorMatriz(coordHomogenea, matrizFinal, resultado);
-		    
-		    printf("(%d, %d) -> (%d, %d)\n", v->x, v->y, (int)round(resultado[0]), (int)round(resultado[1]));
-			
-	        // Atualiza as coordenadas do vértice
-	        v->x = resultado[0];
-	        v->y = resultado[1];
-		}
-		printf("\n");
+		double transformacaoRotacao[3][3];
+		calcularMatrizTransformacao(centroide, matrizRotacao, transformacaoRotacao);
+		aplicarTransformacaoVertices(*f, transformacaoRotacao);
 	}
 }
 
