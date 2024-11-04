@@ -27,16 +27,16 @@ using namespace std;
 
 // Variaveis Globais
 #define ESC 27
-#define PI 3.14159265358979323846 // Definindo o valor de PI manualmente
+#define PI 3.14159265358979323846
 
-//Enumeracao com os tipos de formas geometricas
-enum tipo_forma{LIN = 1, RET = 2, TRI = 3, POL = 4, CIR = 5}; // Linha, Triangulo, Retangulo Poligono, Circulo
-enum tipo_transf{TRA = 6, ROT = 7, ESCA = 8, CIS = 9, REF = 10};
+// Enumeracao com os tipos de formas geometricas
+enum tipo_forma{LIN = 1, RET = 2, TRI = 3, POL = 4, CIR = 5}; // Linha, Triangulo, Retangulo, Poligono e Circulo
+enum tipo_transf{TRA = 6, ROT = 7, ESCA = 8, CIS = 9, REF = 10}; // Translacao, Rotacao, Escala, Cisalhamento e Reflexao
 
 // Verificacoes booleanas
 bool click1 = false, click2 = false; 	// clique do mouse
-bool poligonoIniciado = false;
-int n = 2;
+bool poligonoIniciado = false;			// "o desenho do poligono ja foi iniciado?"
+int n = 2;								// quantidade vertices atuais poligono
 
 // Coordenadas do mouse
 int m_x, m_y; 							// posicao atual do mouse
@@ -110,8 +110,6 @@ void pushTriangulo(int x1, int y1, int x2, int y2, int x3, int y3){
     pushVertice(x3, y3);
 }
 
-
-
 // Declaracoes antecipadas (forward) das funcoes (assinaturas das funcoes)
 void init(void);
 void reshape(int w, int h);
@@ -121,12 +119,12 @@ void keyboard(unsigned char key, int x, int y);
 void mouse(int button, int state, int x, int y);
 void mousePassiveMotion(int x, int y);
 void drawPixel(int x, int y);
-void drawFormas();	// Funcao que percorre a lista de formas geometricas, desenhando-as na tela
+void drawFormas();						// Funcao que percorre a lista de formas geometricas, desenhando-as na tela
 void translacao(int dx, int dy);		// Declara translacao
 void rotacao(float angulo);				// Declara rotacao
 void escala(float Sx, float Sy);		// Declara escala
 void cisalhamento(float Cx, float Cy);	// Declara cisalhamento
-void reflexao(int Rx, int Ry);					// Declara reflexao		
+void reflexao(int Rx, int Ry);			// Declara reflexao		
 void algoritmoBresenham (double x1,double y1,double x2,double y2);
 
 
@@ -175,7 +173,8 @@ int main(int argc, char** argv){
 	printf("  'R' - Rotacao\n");
 	printf("  'WS' - Aumentar/diminuir a escala\n");
 	printf("  'XY' - Cisalhamento no eixo X ou Y\n");
-	printf("  'XYO' - Reflexao sobre o eixo X, o eixo Y ou a origem do sistema\n");
+	printf("  'XYO' - Reflexao sobre o eixo X, o eixo Y ou a origem do sistema\n\n");
+	printf("OBS: O poligono exibe previamente como vai ser ele fechado a partir\n     de 3 vertices, mas ele pode ter mais vertices conforme for\n     clicando na tela ate clicar no ponto incial\n");
 	printf("=================================================================\n");
 	printf("\n");
 
@@ -376,7 +375,7 @@ void mouse(int button, int state, int x, int y){
                         if(click1){
                             x_2 = x;
                             y_2 = height - y - 1;
-                            printf("Clique 2 (%d, %d)\n\n",x_2,y_2);
+                            printf("Vertice 2 (%d, %d)\n\n",x_2,y_2);
                             pushLinha(x_1, y_1, x_2, y_2);
                             click1 = false;
                             glutPostRedisplay();
@@ -385,7 +384,7 @@ void mouse(int button, int state, int x, int y){
                             x_1 = x;
                             y_1 = height - y - 1;
                             printf("Linha\n");
-                            printf("Clique 1 (%d, %d)\n",x_1,y_1);
+                            printf("Vertice 1 (%d, %d)\n",x_1,y_1);
                         }
                     }
                 	break;
@@ -394,7 +393,7 @@ void mouse(int button, int state, int x, int y){
 				        if (click1) {
 				            x_2 = x;
 				            y_2 = height - y - 1; 
-				            printf("Clique 2 (%d, %d)\n\n", x_2, y_2);
+				            printf("Vertice 2 (%d, %d)\n\n", x_2, y_2);
 				            pushRetangulo(x_1, y_1, x_2, y_2);
 				            click1 = false;
 				            glutPostRedisplay();
@@ -402,7 +401,7 @@ void mouse(int button, int state, int x, int y){
 				        	click1 = true;
 				            x_1 = x;
 				            y_1 = height - y - 1; 
-				            printf("Retangulo\nClique 1 (%d, %d)\n", x_1, y_1);
+				            printf("Retangulo\nVertice 1 (%d, %d)\n", x_1, y_1);
 				        }
 			    	}
    					break;
@@ -412,17 +411,17 @@ void mouse(int button, int state, int x, int y){
 							click1 = true;
 							x_1 = x;
 				            y_1 = height - y - 1;
-				            printf("Triangulo\nClique 1 (%d, %d)\n", x_1, y_1);
+				            printf("Triangulo\nVertice 1 (%d, %d)\n", x_1, y_1);
 						} else if(!click2){
 							click2 = true;
 							x_2 = x;
 				            y_2 = height - y - 1; 
-				            printf("Clique 2 (%d, %d)\n", x_2, y_2);
+				            printf("Vertice 2 (%d, %d)\n", x_2, y_2);
 						} else{
 							click1 = click2 = false;
 							x_3 = x;
 				            y_3 = height - y - 1;
-				            printf("Clique 3 (%d, %d)\n\n", x_3, y_3);
+				            printf("Vertice 3 (%d, %d)\n\n", x_3, y_3);
 				            pushTriangulo(x_1, y_1, x_2, y_2, x_3, y_3);
 						}
 					} 
@@ -436,13 +435,12 @@ void mouse(int button, int state, int x, int y){
 		                    poligonoIniciado = true;
 		                    pushForma(POL);
 		                    pushVertice(x_1, y_1);
-		                    printf("Poligono\nClique 1 (%d, %d)\n", x_1, y_1);
+		                    printf("Poligono\nVertice 1 (%d, %d)\n", x_1, y_1);
 		                } else {
 		                	x_2 = x;
 		                	y_2 = height - y - 1; 
 		                	click1 = false;
 		                	
-		                    // Calcula a distância entre o ponto atual e o primeiro ponto
 		                    int distX = abs(x_1 - x_2);
 		                    int distY = abs(y_1 - y_2);
 		                    int tolerancia = 10;
@@ -454,7 +452,7 @@ void mouse(int button, int state, int x, int y){
 		                        click1 = false;
 		                    } else {
 		                        pushVertice(x_2, y_2);
-		                        printf("Clique %d (%d, %d)\n", n++, x_2, y_2);
+		                        printf("Vertice %d (%d, %d)\n", n++, x_2, y_2);
 		                        
 		                    }
 		                }
@@ -476,22 +474,22 @@ vertice calcularCentroide(forma& f) {
     }
  
 	if (n == 0) return vertice{0, 0}; // Retorna {0, 0} se não houver vértices
- 	 return vertice{somaX / n, somaY / n}; // Retorna o centroide calculado	
+    return vertice{somaX / n, somaY / n}; // Retorna o centroide calculado	
 }
 
 void multiplicarMatrizes(double a[3][3], double b[3][3], double resultado[3][3]) {
-	// Inicializar matriz resultado
+	// inicializa a matriz resultado
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
             resultado[i][j] = 0;
         }
     }
 
-    // Multiplicação de matrizes
+	// multiplicação das matrizes
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
             for (int k = 0; k < 3; k++) {
-                resultado[i][j] += a[i][k] * b[k][j]; // Soma dos produtos
+                resultado[i][j] += a[i][k] * b[k][j]; // multiplicação das matra
             }
         }
     }
@@ -529,10 +527,16 @@ void calcularMatrizTransformacao(vertice centroide, double operacao[3][3], doubl
     };
     
 	double operacaoNaOrigem[3][3];
-    multiplicarMatrizes(transladaParaOrigem, operacao, operacaoNaOrigem); 			// realiza a operação na origem
-    multiplicarMatrizes(operacaoNaOrigem, transladaDeVolta, matrizTransformacao);	// retorna para onde estava
+	
+	// translada para a origem e realiza a operacao passada como parametro, salvando na matriz operacaoNaOrigem
+    multiplicarMatrizes(transladaParaOrigem, operacao, operacaoNaOrigem);
+    
+    // multiplica o resultado obtido anteriormente pela translacao de volta, para a forma retornar ao ponto inicial ja transformada
+    multiplicarMatrizes(operacaoNaOrigem, transladaDeVolta, matrizTransformacao);
 }
 
+// função que evita a repetição desses comandos padroes nas funcoes de transformacao
+// recebe a forma como parametro e percorre seus vertices, calculando o valor do novo vertice de acordo com a matriz de transformacao
 void aplicarTransformacaoVertices(forma& f, double matrizTransformacao[3][3]){
 	int i = 0;
 	for(forward_list<vertice>::iterator v = f.v.begin(); v != f.v.end(); v++, i++){
@@ -541,9 +545,10 @@ void aplicarTransformacaoVertices(forma& f, double matrizTransformacao[3][3]){
 		
 		multiplicarVetorPorMatriz(coordHomogenea, matrizTransformacao, verticeResultante);
 		
+		// exibe o valor antigo e novo da coordenada, a fim de comparar os dois
 		printf("(%d, %d) -> (%d, %d)\n", v->x, v->y, (int)round(verticeResultante[0]), (int)round(verticeResultante[1]));
 			
-        // Atualiza as coordenadas do vértice
+        // atualiza as coordenadas do vértice
         v->x = verticeResultante[0];
         v->y = verticeResultante[1];
 	}
@@ -618,6 +623,7 @@ void rotacao(float angulo){
 	}
 }
 
+// unica transformacao que nao e feita com coordenadas homogeneas nesse codigo
 void translacao(int dx, int dy){
 	int i = 0;
 	
@@ -716,60 +722,73 @@ void drawFormas(){
 			    }
 			    size_t n = x.size();
 			    for (size_t i = 0; i < n; i++) {
-			        int x1 = x[i];
-			        int y1 = y[i];
-			        int x2 = x[(i + 1) % n]; // Conecta o último ponto ao primeiro
-			        int y2 = y[(i + 1) % n];
-			        algoritmoBresenham(x1, y1, x2, y2);
+			    	// desenhar linha entre o vertice atual e o seguinte
+					// a operacao modulo garante que seja desenhado entre o ultimo e primeiro vertice
+			        algoritmoBresenham(x[i], y[i], x[(i + 1) % n], y[(i + 1) % n]);
 			    }
-		        
 			    break;
-
-                
         }
     }
 }
 
 void algoritmoBresenham(double x1, double y1, double x2, double y2) {
-    double delta_x, delta_y, desvio, x, y, incE, incNE;
-    int sinal_x, sinal_y;
-    bool trocado = false;
+    // passo 1: definir booleanos declive e simetrico
+    bool declive = false, simetrico = false;	
     
-	delta_x = x2 - x1;
-    delta_y = y2 - y1;
-
-	// obter sinal para incrementar depois
-    sinal_x = (delta_x >= 0) ? 1 : -1;
-    sinal_y = (delta_y >= 0) ? 1 : -1;
-
+    // passo 2: calcular deltas
+    double delta_x = x2 - x1;
+    double delta_y = y2 - y1;
+    
+    // passo 3: testar o produto entre os deltas
+    if(delta_x * delta_y < 0){
+		// substituir os valores de y e delta_y pelo seu simétrico
+		delta_y *= -1;
+		y1 *= -1;
+		y2 *= -1;
+		simetrico = true; // registrar que fez a troca pelo simétrico
+	}
+	
+	// passo 4: testar se o valor absoluto de delta x é menor que o valor absoluto de delta y
+	if(abs(delta_x) < abs(delta_y)){
+        swap(x1, y1);			// trocar coordenadas x e y dos pontos
+        swap(x2, y2);
+        swap(delta_x, delta_y);	// trocar os valores de delta x e delta y
+        declive = true; 		// atribuir verdadeiro ao declive
+	}
+	
+	// passo 5: verificar se o valor da coordenada x do primeiro extremo é superior ao valor da mesma coordenada do segundo extremo
+	if (x1 > x2) {
+	    swap(x1, x2);	// inverter os extremos
+	    swap(y1, y2);
+	    delta_x *= -1;	// substituir delta x e delta y pelos respectivos valores simétricos
+	    delta_y *= -1;
+    }
+	
+	// variáveis para o algoritmo de Bresenham
+	double x, y, decisao, incE, incNE;
+	
 	// ponto inicial
     x = x1;
     y = y1;
 
-	// trocar delta x e delta y
-    if (abs(delta_y) > abs(delta_x)) { 
-        double temp_delta = delta_x;
-        delta_x = delta_y;
-        delta_y = temp_delta;
-        trocado = true;
-    }
-
-    desvio = 2 * abs(delta_y) - abs(delta_x);
+    decisao = 2 * abs(delta_y) - abs(delta_x);
     incE = 2 * abs(delta_y);
-    incNE = 2 * abs(delta_y) - 2 * abs(delta_x);
+    incNE = 2 * (abs(delta_y) - abs(delta_x));
 
-    drawPixel((int)x, (int)y);
-
-    for (int i = 0; i <= abs(delta_x); i++) {
-        if (desvio <= 0) {
-            if (!trocado) x += sinal_x;
-            else y += sinal_y;
-            desvio += incE;
-        }else {
-            x += sinal_x;
-            y += sinal_y;
-            desvio += incNE;
-        }
-        drawPixel((int)x, (int)y);
-    }
+	// rasterização ponto a ponto
+	for (; x <= x2; ++x) {
+		int x_transformado = (int)x;
+		int y_transformado = (int)y;
+		
+		if(declive) swap(x_transformado, y_transformado);
+		if(simetrico) y_transformado *= -1;
+		
+		drawPixel(x_transformado, y_transformado);
+	
+		if(decisao <= 0) decisao += incE;
+		else{
+			decisao += incNE;
+			y += (delta_y > 0) ? 1 : -1;
+		}
+	}
 }
