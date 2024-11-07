@@ -233,7 +233,7 @@ int dx = 30, dy = 30;							// Deslocamento (em pixels) para translacao
 int angulo = 15.0; 								// angulo (em graus) de rotacao
 float anguloEmRad = angulo * (PI / 180.0);
 float fatorEscala = 2;							// Fator de escala
-float Cx = 3.5, Cy = 1.5;						// Fator de cisalhamento nos eixos X e Y
+float Cx = 2, Cy = 2;							// Fator de cisalhamento nos eixos X e Y
 
 // Controle das teclas comuns do teclado
 void keyboard(unsigned char key, int x, int y){
@@ -476,7 +476,6 @@ void mouse(int button, int state, int x, int y){
 							double raio = sqrt(pow(x_2 - x_1, 2) + pow(y_2 - y_1, 2)); // distancia euclidiana
 							printf("Raio: %.1f\n\n", raio);
 							rasterizaCircunferencia(x_1, y_1, raio);
-							algoritmoBresenham(x_1, y_1, x_2, y_2);
 						}
 		        	break;
     			}
@@ -673,7 +672,7 @@ void drawPixel(int x, int y){
 // Funcao que desenha a lista de formas geometricas
 void drawFormas(){
 	// Visualizacao previa
-	if (modo == LIN || modo == CIR){ // desenhar linha até o ponteiro do mouse que representa a linha final ou o raio da circunferencia
+	if (modo == LIN || modo == CIR){
     	if(click1) algoritmoBresenham(x_1, y_1, m_x, m_y);
 	}
 	if (modo == RET) {
@@ -819,7 +818,7 @@ void algoritmoBresenham(double x1, double y1, double x2, double y2) {
 }
 
 void rasterizaCircunferencia(int xc, int yc, double raio) {
-    // calcular variáveis necessarias
+    // calcular variaveis necessarias
     int d = 1 - raio, dE = 3, dSE = -2 * raio + 5;
     pushForma(CIR);
     
