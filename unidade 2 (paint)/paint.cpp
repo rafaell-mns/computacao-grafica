@@ -126,6 +126,7 @@ void escala(float Sx, float Sy);		// Declara escala
 void cisalhamento(float Cx, float Cy);	// Declara cisalhamento
 void reflexao(int Rx, int Ry);			// Declara reflexao		
 void algoritmoBresenham (double x1,double y1,double x2,double y2);
+void rasterizaCircunferencia (int xc, int yc, double raio);
 
 
 // Funcao principal
@@ -148,6 +149,7 @@ int main(int argc, char** argv){
 	glutAddMenuEntry("Retangulo", RET);
 	glutAddMenuEntry("Triangulo", TRI);
 	glutAddMenuEntry("Poligono", POL);
+	glutAddMenuEntry("Circunferencia", CIR);
 	
 	int menu_transformacao = glutCreateMenu(menu_popup);
 	glutAddMenuEntry("Translacao", TRA);
@@ -227,15 +229,15 @@ void menu_popup(int value){
 	}
 }
 
-int dx = 30, dy = 30;							// Deslocamento (em pixels) para translação						
-int angulo = 45.0; 								// Ângulo (em graus) de rotação
+int dx = 30, dy = 30;							// Deslocamento (em pixels) para translacao						
+int angulo = 15.0; 								// angulo (em graus) de rotacao
 float anguloEmRad = angulo * (PI / 180.0);
 float fatorEscala = 2;							// Fator de escala
 float Cx = 3.5, Cy = 1.5;						// Fator de cisalhamento nos eixos X e Y
 
 // Controle das teclas comuns do teclado
 void keyboard(unsigned char key, int x, int y){
-    switch (key) { // key - variável que possui valor ASCII da tecla pressionada
+    switch (key) { // key - variavel que possui valor ASCII da tecla pressionada
         case ESC: 
             exit(EXIT_SUCCESS); 
             break;
@@ -254,7 +256,7 @@ void keyboard(unsigned char key, int x, int y){
 			} 
             break;
         case 'W':
-        case 'w': // Transformações geométricas
+        case 'w': // Transformacões geométricas
 		    switch (operacao) {
 		        case TRA:
 		            if(!formas.empty()){
@@ -458,9 +460,27 @@ void mouse(int button, int state, int x, int y){
 		                }
 		            }
 		            break;
-   			
-        
-    		}
+		        case CIR:
+		        	if (state == GLUT_DOWN){
+						if(!click1){
+							click1 = true;
+							x_1 = x;
+                            y_1 = height - y - 1;
+                            printf("Circunferencia\n");
+                            printf("Centro (%d, %d)\n",x_1,y_1);
+						}
+						else{
+							x_2 = x;
+		                	y_2 = height - y - 1; 
+							click1 = false;
+							double raio = sqrt(pow(x_2 - x_1, 2) + pow(y_2 - y_1, 2)); // distancia euclidiana
+							printf("Raio: %.1f\n\n", raio);
+							rasterizaCircunferencia(x_1, y_1, raio);
+							algoritmoBresenham(x_1, y_1, x_2, y_2);
+						}
+		        	break;
+    			}
+			}
 	}
 }
 
@@ -473,7 +493,7 @@ vertice calcularCentroide(forma& f) {
         ++n;
     }
  
-	if (n == 0) return vertice{0, 0}; // Retorna {0, 0} se não houver vértices
+	if (n == 0) return vertice{0, 0}; // Retorna {0, 0} se nao houver vértices
     return vertice{somaX / n, somaY / n}; // Retorna o centroide calculado	
 }
 
@@ -485,11 +505,11 @@ void multiplicarMatrizes(double a[3][3], double b[3][3], double resultado[3][3])
         }
     }
 
-	// multiplicação das matrizes
+	// multiplicacao das matrizes
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
             for (int k = 0; k < 3; k++) {
-                resultado[i][j] += a[i][k] * b[k][j]; // multiplicação das matra
+                resultado[i][j] += a[i][k] * b[k][j]; // multiplicacao das matra
             }
         }
     }
@@ -535,7 +555,7 @@ void calcularMatrizTransformacao(vertice centroide, double operacao[3][3], doubl
     multiplicarMatrizes(operacaoNaOrigem, transladaDeVolta, matrizTransformacao);
 }
 
-// função que evita a repetição desses comandos padroes nas funcoes de transformacao
+// funcao que evita a repeticao desses comandos padroes nas funcoes de transformacao
 // recebe a forma como parametro e percorre seus vertices, calculando o valor do novo vertice de acordo com a matriz de transformacao
 void aplicarTransformacaoVertices(forma& f, double matrizTransformacao[3][3]){
 	int i = 0;
@@ -564,7 +584,7 @@ void reflexao(int Rx, int Ry){
 	
 	// Para cada forma, obter a matriz de transformacao final após calcular o centróide da forma
 	for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
-		vertice centroide = calcularCentroide(*f); 		// Chama a função e obtém um vertice
+		vertice centroide = calcularCentroide(*f); 		// Chama a funcao e obtém um vertice
 		
 		double transformacaoReflexao[3][3];
 		calcularMatrizTransformacao(centroide, matrizReflexao, transformacaoReflexao);
@@ -581,7 +601,7 @@ void cisalhamento(float Cx, float Cy){
 	
 	// Para cada forma, obter a matriz de transformacao final após calcular o centróide da forma
 	for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
-		vertice centroide = calcularCentroide(*f); 		// Chama a função e obtém um vertice
+		vertice centroide = calcularCentroide(*f); 		// Chama a funcao e obtém um vertice
 		
 		double transformacaoCisalhamento[3][3];
 		calcularMatrizTransformacao(centroide, matrizCisalhamento, transformacaoCisalhamento);
@@ -598,7 +618,7 @@ void escala(float Sx, float Sy){
 	
 	// Para cada forma, obter a matriz de transformacao final após calcular o centróide da forma
 	for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
-		vertice centroide = calcularCentroide(*f); 		// Chama a função e obtém um vertice
+		vertice centroide = calcularCentroide(*f); 		// Chama a funcao e obtém um vertice
 				
 		double transformacaoEscala[3][3];
 		calcularMatrizTransformacao(centroide, matrizEscala, transformacaoEscala);
@@ -615,7 +635,7 @@ void rotacao(float angulo){
 	
 	// Para cada forma, obter a matriz de transformacao final após calcular o centróide da forma
 	for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
-		vertice centroide = calcularCentroide(*f); 		// Chama a função e obtém um vertice
+		vertice centroide = calcularCentroide(*f); 		// Chama a funcao e obtém um vertice
 		
 		double transformacaoRotacao[3][3];
 		calcularMatrizTransformacao(centroide, matrizRotacao, transformacaoRotacao);
@@ -630,8 +650,8 @@ void translacao(int dx, int dy){
 	for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
 		for(forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++){
 			printf("(%d, %d) -> (%d, %d)\n", v->x, v->y, v->x+dx, v->y+dy);
-			v->x += dx;  // Move o vértice na direção x
-		    v->y += dy;	 // Move o vértice na direção y
+			v->x += dx;  // Move o vértice na direcao x
+		    v->y += dy;	 // Move o vértice na direcao y
 		}
 		printf("\n");
 	}
@@ -653,7 +673,7 @@ void drawPixel(int x, int y){
 // Funcao que desenha a lista de formas geometricas
 void drawFormas(){
 	// Visualizacao previa
-	if (modo == LIN){
+	if (modo == LIN || modo == CIR){ // desenhar linha até o ponteiro do mouse que representa a linha final ou o raio da circunferencia
     	if(click1) algoritmoBresenham(x_1, y_1, m_x, m_y);
 	}
 	if (modo == RET) {
@@ -720,13 +740,18 @@ void drawFormas(){
 			        x.push_back(v->x);
 			        y.push_back(v->y);
 			    }
-			    size_t n = x.size();
-			    for (size_t i = 0; i < n; i++) {
+			    for (size_t i = 0; i < x.size(); i++) {
 			    	// desenhar linha entre o vertice atual e o seguinte
 					// a operacao modulo garante que seja desenhado entre o ultimo e primeiro vertice
 			        algoritmoBresenham(x[i], y[i], x[(i + 1) % n], y[(i + 1) % n]);
 			    }
 			    break;
+			case CIR:
+				// Agora, desenha os pontos que foram armazenados
+                for (forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++) {
+                    drawPixel(v->x, v->y);  // Desenha cada ponto armazenado
+                }
+                break;
         }
     }
 }
@@ -764,7 +789,7 @@ void algoritmoBresenham(double x1, double y1, double x2, double y2) {
 	    delta_y *= -1;
     }
 	
-	// variáveis para o algoritmo de Bresenham
+	// variaveis para o algoritmo de Bresenham
 	double x, y, decisao, incE, incNE;
 	
 	// ponto inicial
@@ -775,7 +800,7 @@ void algoritmoBresenham(double x1, double y1, double x2, double y2) {
     incE = 2 * abs(delta_y);
     incNE = 2 * (abs(delta_y) - abs(delta_x));
 
-	// rasterização ponto a ponto
+	// rasterizacao ponto a ponto
 	for (; x <= x2; ++x) {
 		int x_transformado = (int)x;
 		int y_transformado = (int)y;
@@ -791,4 +816,36 @@ void algoritmoBresenham(double x1, double y1, double x2, double y2) {
 			y += (delta_y > 0) ? 1 : -1;
 		}
 	}
+}
+
+void rasterizaCircunferencia(int xc, int yc, double raio) {
+    // calcular variáveis necessarias
+    int d = 1 - raio, dE = 3, dSE = -2 * raio + 5;
+    pushForma(CIR);
+    
+    int xi = 0, yi = (int)raio;
+    
+    while (yi > xi) {
+        if (d < 0) {
+            d += dE;
+            dE += 2;
+            dSE += 2;
+        } else {
+            d += dSE;
+            dE += 2;
+            dSE += 4;
+            yi--;
+        }
+        xi++;
+               
+  		// 8 pontos simetricos
+        pushVertice(xc + xi, yc + yi); 
+        pushVertice(xc - xi, yc + yi); 
+        pushVertice(xc + xi, yc - yi); 
+        pushVertice(xc - xi, yc - yi); 
+        pushVertice(xc + yi, yc + xi); 
+        pushVertice(xc - yi, yc + xi); 
+        pushVertice(xc + yi, yc - xi); 
+        pushVertice(xc - yi, yc - xi); 
+    }
 }
