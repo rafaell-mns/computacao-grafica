@@ -474,7 +474,8 @@ void mouse(int button, int state, int x, int y){
 		                	y_2 = height - y - 1; 
 							click1 = false;
 							double raio = sqrt(pow(x_2 - x_1, 2) + pow(y_2 - y_1, 2)); // distancia euclidiana
-							printf("Raio: %.1f\n\n", raio);
+							printf("Raio: %.1f\n", raio);
+							printf("Diametro: %.1f\n\n", raio*2);
 							rasterizaCircunferencia(x_1, y_1, raio);
 						}
 		        	break;
@@ -672,7 +673,7 @@ void drawPixel(int x, int y){
 // Funcao que desenha a lista de formas geometricas
 void drawFormas(){
 	// Visualizacao previa
-	if (modo == LIN || modo == CIR){
+	if (modo == LIN){
     	if(click1) algoritmoBresenham(x_1, y_1, m_x, m_y);
 	}
 	if (modo == RET) {
@@ -695,6 +696,13 @@ void drawFormas(){
 			if (click1) algoritmoBresenham(x_1, y_1, m_x, m_y);
 			else algoritmoBresenham(x_2, y_2, m_x, m_y);
 		}	
+	}
+	if (modo == CIR){
+		if (click1){
+		    int dx = m_x - x_1, dy = m_y - y_1;					// deslocamento em x e y do centro ate a posicao do mouse
+			algoritmoBresenham(x_1, y_1, m_x, m_y);				// raio na direcao do mouse
+			algoritmoBresenham(x_1, y_1, x_1 - dx, y_1 - dy);	// raio na direcao oposta (centro - deslocamento realizado)
+		}
 	}
     
     //Percorre a lista de formas geometricas para desenhar
@@ -734,23 +742,23 @@ void drawFormas(){
 				algoritmoBresenham(x[1], y[1], x[2], y[2]);
         		algoritmoBresenham(x[0], y[0], x[2], y[2]);
         		break;
+        	case CIR:
+                for (forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++) {
+                    drawPixel(v->x, v->y);  // desenha cada ponto armazenado em rasterizaCircunferencia
+                }
+                break;
         	case POL:
 			    for (forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++, i++) {
 			        x.push_back(v->x);
 			        y.push_back(v->y);
 			    }
-			    for (size_t i = 0; i < x.size(); i++) {
+			    size_t n = x.size();
+			    for (size_t i = 0; i < n; i++) {
 			    	// desenhar linha entre o vertice atual e o seguinte
 					// a operacao modulo garante que seja desenhado entre o ultimo e primeiro vertice
 			        algoritmoBresenham(x[i], y[i], x[(i + 1) % n], y[(i + 1) % n]);
 			    }
-			    break;
-			case CIR:
-				// Agora, desenha os pontos que foram armazenados
-                for (forward_list<vertice>::iterator v = f->v.begin(); v != f->v.end(); v++) {
-                    drawPixel(v->x, v->y);  // Desenha cada ponto armazenado
-                }
-                break;
+			    break;	
         }
     }
 }
