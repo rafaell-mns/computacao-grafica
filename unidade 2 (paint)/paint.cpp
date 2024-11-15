@@ -37,6 +37,7 @@ enum tipo_transf{TRA = 6, ROT = 7, ESCA = 8, CIS = 9, REF = 10}; // Translacao, 
 bool click1 = false, click2 = false; 	// clique do mouse
 bool poligonoIniciado = false;			// "o desenho do poligono ja foi iniciado?"
 int n = 2;								// quantidade vertices atuais poligono
+bool colorir = false;
 
 // Coordenadas do mouse
 int m_x, m_y; 							// posicao atual do mouse
@@ -166,16 +167,17 @@ int main(int argc, char** argv){
 	glutAttachMenu(GLUT_RIGHT_BUTTON);
 	
 	printf("=================================================================\n");
-	printf("Por padrao, LINHA e TRANSLACAO estao previamente selecionados\n\n");
+	printf("Por padrao, LINHA, TRANSLACAO, colorir DESATIVADO e VERMELHO estao previamente selecionados\n\n");
 	printf("Teclas disponiveis:\n");
-	printf("  'C' - Limpar a tela\n");
-	printf("  'Z' - Apagar a ultima forma desenhada\n\n");
+	printf("  C - Alternar colorir/desenhar\n");
+	printf("  P - Limpar a tela\n");
+	printf("  Z - Apagar a ultima forma desenhada\n\n");
 	printf("Transformacoes (apos selecionar no menu):\n");
-	printf("  'WASD' - Direcao da translacao\n");
-	printf("  'R' - Rotacao\n");
-	printf("  'WS' - Aumentar/diminuir a escala\n");
-	printf("  'XY' - Cisalhamento no eixo X ou Y\n");
-	printf("  'XYO' - Reflexao sobre o eixo X, o eixo Y ou a origem do sistema\n\n");
+	printf("  WASD  Direcao da translacao\n");
+	printf("   R    Rotacao\n");
+	printf("   WS   Aumentar/diminuir a escala\n");
+	printf("   XY   Cisalhamento no eixo X ou Y\n");
+	printf("  XYO   Reflexao sobre o eixo X, o eixo Y ou a origem do sistema\n\n");
 	printf("OBS: O poligono exibe previamente como vai ser ele fechado a partir\n     de 3 vertices, mas ele pode ter mais vertices conforme for\n     clicando na tela ate clicar no ponto incial\n");
 	printf("=================================================================\n");
 	printf("\n");
@@ -241,8 +243,8 @@ void keyboard(unsigned char key, int x, int y){
         case ESC: 
             exit(EXIT_SUCCESS); 
             break;
-        case 'c':								// Limpar a tela
-        case 'C':
+        case 'p':								// Limpar a tela
+        case 'P':
             formas.clear();
             printf("Tela limpada\n\n");
             glutPostRedisplay();
@@ -255,6 +257,13 @@ void keyboard(unsigned char key, int x, int y){
 			  glutPostRedisplay();	
 			} 
             break;
+        case 'c':
+	    case 'C':
+	    	colorir = !colorir;
+	    	if(colorir) printf("Modo colorir ATIVADO. Proibido desenhar.\n");
+	    	else printf("Modo colorir DESATIVADO. Livre para desenhar.\n");
+	    	printf("\n");
+	    	break;
         case 'W':
         case 'w': // Transformacões geométricas
 		    switch (operacao) {
@@ -367,120 +376,141 @@ void keyboard(unsigned char key, int x, int y){
     }
 }
 
+void getCorPixel(int x, int y, int color[3]){
+	y = height - y - 1;	// converte coordenada mouse
+	    unsigned char colorBuffer[3];
+
+    // Lê os pixels na posição clicada
+    glReadPixels(x, y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, colorBuffer);
+
+    // Converte os valores de unsigned char para int e armazena no vetor de saída
+    color[0] = static_cast<int>(colorBuffer[0]);  // Vermelho
+    color[1] = static_cast<int>(colorBuffer[1]);  // Verde
+    color[2] = static_cast<int>(colorBuffer[2]);  // Azul
+    
+    printf("(%d, %d, %d)\n", color[0], color[1], color[2]);
+}
+
 // Controle dos botoes do mouse
 void mouse(int button, int state, int x, int y){
     switch (button) {
         case GLUT_LEFT_BUTTON:
-            switch(modo){
-                case LIN:
-                    if (state == GLUT_DOWN) {
-                        if(click1){
-                            x_2 = x;
-                            y_2 = height - y - 1;
-                            printf("Vertice 2 (%d, %d)\n\n",x_2,y_2);
-                            pushLinha(x_1, y_1, x_2, y_2);
-                            click1 = false;
-                            glutPostRedisplay();
-                        }else{
-                            click1 = true;
-                            x_1 = x;
-                            y_1 = height - y - 1;
-                            printf("Linha\n");
-                            printf("Vertice 1 (%d, %d)\n",x_1,y_1);
-                        }
-                    }
-                	break;
-            	case RET:
-            		if (state == GLUT_DOWN) {
-				        if (click1) {
-				            x_2 = x;
-				            y_2 = height - y - 1; 
-				            printf("Vertice 2 (%d, %d)\n\n", x_2, y_2);
-				            pushRetangulo(x_1, y_1, x_2, y_2);
-				            click1 = false;
-				            glutPostRedisplay();
-				        } else {
-				        	click1 = true;
-				            x_1 = x;
-				            y_1 = height - y - 1; 
-				            printf("Retangulo\nVertice 1 (%d, %d)\n", x_1, y_1);
-				        }
-			    	}
-   					break;
-   				case TRI:
-   					if (state == GLUT_DOWN){
-						if(!click1){
-							click1 = true;
-							x_1 = x;
-				            y_1 = height - y - 1;
-				            printf("Triangulo\nVertice 1 (%d, %d)\n", x_1, y_1);
-						} else if(!click2){
-							click2 = true;
-							x_2 = x;
-				            y_2 = height - y - 1; 
-				            printf("Vertice 2 (%d, %d)\n", x_2, y_2);
-						} else{
-							click1 = click2 = false;
-							x_3 = x;
-				            y_3 = height - y - 1;
-				            printf("Vertice 3 (%d, %d)\n\n", x_3, y_3);
-				            pushTriangulo(x_1, y_1, x_2, y_2, x_3, y_3);
-						}
-					} 
-					break;
-				case POL:
-				    if (state == GLUT_DOWN) {
-		                if (!poligonoIniciado) {
-		                	x_1 = x;
-	   	   	   	   	    	y_1 = height - y - 1;
-		                    click1 = true;
-		                    poligonoIniciado = true;
-		                    pushForma(POL);
-		                    pushVertice(x_1, y_1);
-		                    printf("Poligono\nVertice 1 (%d, %d)\n", x_1, y_1);
-		                } else {
-		                	x_2 = x;
-		                	y_2 = height - y - 1; 
-		                	click1 = false;
-		                	
-		                    int distX = abs(x_1 - x_2);
-		                    int distY = abs(y_1 - y_2);
-		                    int tolerancia = 10;
-		
-		                    if (distX < tolerancia && distY < tolerancia) {
-		                        printf("Poligono fechado\n\n");
-		                        poligonoIniciado = false; 		// Reset para o próximo
-		                        n = 2;							// Reset para o próximo
-		                        click1 = false;
-		                    } else {
-		                        pushVertice(x_2, y_2);
-		                        printf("Vertice %d (%d, %d)\n", n++, x_2, y_2);
-		                        
-		                    }
-		                }
-		            }
-		            break;
-		        case CIR:
-		        	if (state == GLUT_DOWN){
-						if(!click1){
-							click1 = true;
-							x_1 = x;
-                            y_1 = height - y - 1;
-                            printf("Circunferencia\n");
-                            printf("Centro (%d, %d)\n",x_1,y_1);
-						}
-						else{
-							x_2 = x;
-		                	y_2 = height - y - 1; 
-							click1 = false;
-							double raio = sqrt(pow(x_2 - x_1, 2) + pow(y_2 - y_1, 2)); // distancia euclidiana
-							printf("Raio: %.1f\n", raio);
-							printf("Diametro: %.1f\n\n", raio*2);
-							rasterizaCircunferencia(x_1, y_1, raio);
-						}
-		        	break;
-    			}
+        	if(colorir){
+        		int cor[3];
+				getCorPixel(x, y, cor);
 			}
+			else{
+				switch(modo){
+	                case LIN:
+	                    if (state == GLUT_DOWN) {
+	                        if(click1){
+	                            x_2 = x;
+	                            y_2 = height - y - 1;
+	                            printf("Vertice 2 (%d, %d)\n\n",x_2,y_2);
+	                            pushLinha(x_1, y_1, x_2, y_2);
+	                            click1 = false;
+	                            glutPostRedisplay();
+	                        }else{
+	                            click1 = true;
+	                            x_1 = x;
+	                            y_1 = height - y - 1;
+	                            printf("Linha\n");
+	                            printf("Vertice 1 (%d, %d)\n",x_1,y_1);
+	                        }
+	                    }
+	                	break;
+	            	case RET:
+	            		if (state == GLUT_DOWN) {
+					        if (click1) {
+					            x_2 = x;
+					            y_2 = height - y - 1; 
+					            printf("Vertice 2 (%d, %d)\n\n", x_2, y_2);
+					            pushRetangulo(x_1, y_1, x_2, y_2);
+					            click1 = false;
+					            glutPostRedisplay();
+					        } else {
+					        	click1 = true;
+					            x_1 = x;
+					            y_1 = height - y - 1; 
+					            printf("Retangulo\nVertice 1 (%d, %d)\n", x_1, y_1);
+					        }
+				    	}
+	   					break;
+	   				case TRI:
+	   					if (state == GLUT_DOWN){
+							if(!click1){
+								click1 = true;
+								x_1 = x;
+					            y_1 = height - y - 1;
+					            printf("Triangulo\nVertice 1 (%d, %d)\n", x_1, y_1);
+							} else if(!click2){
+								click2 = true;
+								x_2 = x;
+					            y_2 = height - y - 1; 
+					            printf("Vertice 2 (%d, %d)\n", x_2, y_2);
+							} else{
+								click1 = click2 = false;
+								x_3 = x;
+					            y_3 = height - y - 1;
+					            printf("Vertice 3 (%d, %d)\n\n", x_3, y_3);
+					            pushTriangulo(x_1, y_1, x_2, y_2, x_3, y_3);
+							}
+						} 
+						break;
+					case POL:
+					    if (state == GLUT_DOWN) {
+			                if (!poligonoIniciado) {
+			                	x_1 = x;
+		   	   	   	   	    	y_1 = height - y - 1;
+			                    click1 = true;
+			                    poligonoIniciado = true;
+			                    pushForma(POL);
+			                    pushVertice(x_1, y_1);
+			                    printf("Poligono\nVertice 1 (%d, %d)\n", x_1, y_1);
+			                } else {
+			                	x_2 = x;
+			                	y_2 = height - y - 1; 
+			                	click1 = false;
+			                	
+			                    int distX = abs(x_1 - x_2);
+			                    int distY = abs(y_1 - y_2);
+			                    int tolerancia = 10;
+			
+			                    if (distX < tolerancia && distY < tolerancia) {
+			                        printf("Poligono fechado\n\n");
+			                        poligonoIniciado = false; 		// Reset para o próximo
+			                        n = 2;							// Reset para o próximo
+			                        click1 = false;
+			                    } else {
+			                        pushVertice(x_2, y_2);
+			                        printf("Vertice %d (%d, %d)\n", n++, x_2, y_2);
+			                        
+			                    }
+			                }
+			            }
+			            break;
+			        case CIR:
+			        	if (state == GLUT_DOWN){
+							if(!click1){
+								click1 = true;
+								x_1 = x;
+	                            y_1 = height - y - 1;
+	                            printf("Circunferencia\n");
+	                            printf("Centro (%d, %d)\n",x_1,y_1);
+							}
+							else{
+								x_2 = x;
+			                	y_2 = height - y - 1; 
+								click1 = false;
+								double raio = sqrt(pow(x_2 - x_1, 2) + pow(y_2 - y_1, 2)); // distancia euclidiana
+								printf("Raio: %.1f\n", raio);
+								printf("Diametro: %.1f\n\n", raio*2);
+								rasterizaCircunferencia(x_1, y_1, raio);
+							}
+			        	break;
+	    			}
+				}
+			}	
 	}
 }
 
@@ -856,3 +886,4 @@ void rasterizaCircunferencia(int xc, int yc, double raio) {
         pushVertice(xc - yi, yc - xi); 
     }
 }
+
