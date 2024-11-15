@@ -378,7 +378,7 @@ void keyboard(unsigned char key, int x, int y){
 
 void getCorPixel(int x, int y, int color[3]){
 	y = height - y - 1;	// converte coordenada mouse
-	    unsigned char colorBuffer[3];
+  unsigned char colorBuffer[3];
 
     // Lê os pixels na posição clicada
     glReadPixels(x, y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, colorBuffer);
@@ -388,7 +388,31 @@ void getCorPixel(int x, int y, int color[3]){
     color[1] = static_cast<int>(colorBuffer[1]);  // Verde
     color[2] = static_cast<int>(colorBuffer[2]);  // Azul
     
-    printf("(%d, %d, %d)\n", color[0], color[1], color[2]);
+    // printf("(%d, %d, %d)\n", color[0], color[1], color[2]);
+}
+
+void floodFill(int x, int y, int atualR, int atualG, int atualB, int novoR, int novoG, int novoB){
+    int corPixel[3];
+    getCorPixel(x, y, corPixel);
+    
+	if (x < 0 || x >= width || y < 0 || y >= height) return;
+
+    if(corPixel[0] == atualR && corPixel[1] == atualG && corPixel[2] == atualB) {
+        // Se a cor for a mesma do pixel de origem, alteramos para a nova cor
+        glColor3f(novoR / 255.0f, novoG / 255.0f, novoB / 255.0f); // Define a nova cor
+
+        // Desenha o pixel colorido
+        glBegin(GL_POINTS);
+        glVertex2i(x, y);
+        glEnd();
+    	glutPostRedisplay(); // Atualiza a tela para mostrar o pixel desenhado
+
+        // Preenche os vizinhos de maneira recursiva
+        floodFill(x + 1, y, atualR, atualG, atualB, novoR, novoG, novoB); // Vizinhos à direita
+        // floodFill(x - 1, y, atualR, atualG, atualB, novoR, novoG, novoB); // Vizinhos à esquerda
+        // floodFill(x, y + 1, atualR, atualG, atualB, novoR, novoG, novoB); // Vizinhos acima
+        // floodFill(x, y - 1, atualR, atualG, atualB, novoR, novoG, novoB); // Vizinhos abaixo
+    }
 }
 
 // Controle dos botoes do mouse
@@ -398,6 +422,8 @@ void mouse(int button, int state, int x, int y){
         	if(colorir){
         		int cor[3];
 				getCorPixel(x, y, cor);
+				floodFill(x, height - y - 1, cor[0], cor[1], cor[2], 255, 0, 0);
+				glutSwapBuffers();
 			}
 			else{
 				switch(modo){
@@ -695,6 +721,7 @@ void mousePassiveMotion(int x, int y){
 
 // Funcao para desenhar apenas um pixel na tela
 void drawPixel(int x, int y){
+	glPointSize(2);
     glBegin(GL_POINTS); 	// Seleciona a primitiva GL_POINTS para desenhar
         glVertex2i(x, y);
     glEnd();  				// indica o fim do ponto
