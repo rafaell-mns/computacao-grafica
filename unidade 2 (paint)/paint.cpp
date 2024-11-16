@@ -32,6 +32,7 @@ using namespace std;
 // Enumeracao com os tipos de formas geometricas
 enum tipo_forma{LIN = 1, RET = 2, TRI = 3, POL = 4, CIR = 5}; // Linha, Triangulo, Retangulo, Poligono e Circulo
 enum tipo_transf{TRA = 6, ROT = 7, ESCA = 8, CIS = 9, REF = 10}; // Translacao, Rotacao, Escala, Cisalhamento e Reflexao
+enum cores{VERMELHO = 11};
 
 // Verificacoes booleanas
 bool click1 = false, click2 = false; 	// clique do mouse
@@ -402,82 +403,58 @@ void keyboard(unsigned char key, int x, int y){
     }
 }
 
-void getCorPixel(int x, int y, int color[3]){
-	y = height - y - 1;	// converte coordenada mouse
-  unsigned char colorBuffer[3];
+void getCorPixel(int x, int y, int color[3]) {
+    y = height - y - 1;  // converte coordenada de mouse para OpenGL
+    unsigned char colorBuffer[3];
 
-    // Lê os pixels na posição clicada
+    // Lê o pixel na posição (x, y)
     glReadPixels(x, y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, colorBuffer);
 
-    // Converte os valores de unsigned char para int e armazena no vetor de saída
+    // Converte os valores de unsigned char para int
     color[0] = static_cast<int>(colorBuffer[0]);  // Vermelho
     color[1] = static_cast<int>(colorBuffer[1]);  // Verde
     color[2] = static_cast<int>(colorBuffer[2]);  // Azul
-    
-    // printf("(%d, %d, %d)\n", color[0], color[1], color[2]);
 }
 
-void floodFill(int x, int y, int atualR, int atualG, int atualB, int novoR, int novoG, int novoB) {
-    // Verifica os limites
-    if (x < 0 || x >= width || y < 0 || y >= height) return;
+bool mesmaCor(int corA[3], int corB[3]) {
+    return corA[0] == corB[0] && corA[1] == corB[1] && corA[2] == corB[2];
+}
 
-    // Verifica se a cor do pixel atual é igual à cor a ser substituída
-    if (matrizCoresPixels[x][y][0] == atualR &&
-        matrizCoresPixels[x][y][1] == atualG &&
-        matrizCoresPixels[x][y][2] == atualB) {
-
-        // Altera a cor do pixel
-        matrizCoresPixels[x][y][0] = novoR;
-        matrizCoresPixels[x][y][1] = novoG;
-        matrizCoresPixels[x][y][2] = novoB;
-
-        // Preenche a linha à direita
-        int i = x + 1;
-        while (i < width && matrizCoresPixels[i][y][0] == atualR &&
-                           matrizCoresPixels[i][y][1] == atualG &&
-                           matrizCoresPixels[i][y][2] == atualB) {
-            matrizCoresPixels[i][y][0] = novoR;
-            matrizCoresPixels[i][y][1] = novoG;
-            matrizCoresPixels[i][y][2] = novoB;
-            i++;
-        }
-
-        // Preenche a linha à esquerda
-        i = x - 1;
-        while (i >= 0 && matrizCoresPixels[i][y][0] == atualR &&
-                           matrizCoresPixels[i][y][1] == atualG &&
-                           matrizCoresPixels[i][y][2] == atualB) {
-            matrizCoresPixels[i][y][0] = novoR;
-            matrizCoresPixels[i][y][1] = novoG;
-            matrizCoresPixels[i][y][2] = novoB;
-            i--;
-        }
-
-        // Agora preenche as linhas acima e abaixo de forma similar
-        // Linha acima
-        if (y + 1 < height) {
-            for (int i = x; i < width; ++i) {
-                if (matrizCoresPixels[i][y + 1][0] == atualR &&
-                    matrizCoresPixels[i][y + 1][1] == atualG &&
-                    matrizCoresPixels[i][y + 1][2] == atualB) {
-                    floodFill(i, y + 1, atualR, atualG, atualB, novoR, novoG, novoB);
-                }
-            }
-        }
-
-        // Linha abaixo
-        if (y - 1 >= 0) {
-            for (int i = x; i >= 0; --i) {
-                if (matrizCoresPixels[i][y - 1][0] == atualR &&
-                    matrizCoresPixels[i][y - 1][1] == atualG &&
-                    matrizCoresPixels[i][y - 1][2] == atualB) {
-                    floodFill(i, y - 1, atualR, atualG, atualB, novoR, novoG, novoB);
-                }
-            }
-        }
+void decodificaCor(int codigoCor, int canalCor[3]) {
+    if (codigoCor == VERMELHO) {
+        canalCor[0] = 255;  // Vermelho
+        canalCor[1] = 0;    // Verde
+        canalCor[2] = 0;    // Azul
     }
 }
 
+void floodFill(int x, int y, int corAtual[3], int novaCor[3]) {
+    // Verifica os limites (a tela e a borda preta)
+    if (x < 0 || x >= width || y < 0 || y >= height) return;
+
+    // Lê a cor do pixel atual
+    int corPixel[3];
+    getCorPixel(x, y, corPixel);
+    printf("Pixel (%d, %d): (%d, %d, %d)\n", x, y, corPixel[0], corPixel[1], corPixel[2]);
+
+
+    // Verifica se a cor do pixel é a mesma que a cor que estamos procurando
+    if (!mesmaCor(corPixel, corAtual)) return;
+
+    // Verifica se o pixel é preto (borda) - evita ultrapassar a borda preta
+    if (corPixel[0] == 0 && corPixel[1] == 0 && corPixel[2] == 0) return;  // Preto (borda)
+
+    // Altera a cor do pixel
+    matrizCoresPixels[x][y][0] = novaCor[0];
+    matrizCoresPixels[x][y][1] = novaCor[1];
+    matrizCoresPixels[x][y][2] = novaCor[2];
+
+    // Chama recursivamente para os 4 vizinhos: direita, esquerda, acima e abaixo
+    floodFill(x + 1, y, corAtual, novaCor);  // Direita
+    //floodFill(x - 1, y, corAtual, novaCor);  // Esquerda
+    //floodFill(x, y + 1, corAtual, novaCor);  // Acima
+    //floodFill(x, y - 1, corAtual, novaCor);  // Abaixo
+}
 
 // Controle dos botoes do mouse
 void mouse(int button, int state, int x, int y){
@@ -486,7 +463,9 @@ void mouse(int button, int state, int x, int y){
         	if(colorir){
         		int cor[3];
 				getCorPixel(x, y, cor);
-				floodFill(x, height - y - 1, cor[0], cor[1], cor[2], 255, 0, 0);
+				int novaCor[3];
+				decodificaCor(VERMELHO, novaCor);
+				floodFill(x, height - y - 1, cor, novaCor);
 				
 			}
 			else{
@@ -977,4 +956,3 @@ void rasterizaCircunferencia(int xc, int yc, double raio) {
         pushVertice(xc - yi, yc - xi); 
     }
 }
-
