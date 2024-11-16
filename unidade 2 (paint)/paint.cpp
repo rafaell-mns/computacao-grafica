@@ -134,9 +134,9 @@ void rasterizaCircunferencia (int xc, int yc, double raio);
 void inicializarMatrizCores() {
     for (int x = 0; x < width; ++x) {
         for (int y = 0; y < height; ++y) {
-            matrizCoresPixels[x][y][0] = 255; // Vermelho
-            matrizCoresPixels[x][y][1] = 255; // Verde
-            matrizCoresPixels[x][y][2] = 255; // Azul
+            matrizCoresPixels[x][y][0] = 255; // canal R
+            matrizCoresPixels[x][y][1] = 255; // canal G
+            matrizCoresPixels[x][y][2] = 255; // canal B
             // 255 em cada -> pixel branco (fundo da tela)
         }
     }
@@ -273,6 +273,7 @@ void keyboard(unsigned char key, int x, int y){
         case 'p':								// Limpar a tela
         case 'P':
             formas.clear();
+            inicializarMatrizCores();
             printf("Tela limpada\n\n");
             glutPostRedisplay();
             break;
