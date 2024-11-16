@@ -49,6 +49,7 @@ int operacao = TRA;
 
 // Largura e altura da janela
 int width = 512, height = 512;
+int matrizCoresPixels[512][512][3];	// matriz para armazenar cores e renderiza-las
 
 // Definicao de vertice
 struct vertice{
@@ -129,9 +130,20 @@ void reflexao(int Rx, int Ry);			// Declara reflexao
 void algoritmoBresenham (double x1,double y1,double x2,double y2);
 void rasterizaCircunferencia (int xc, int yc, double raio);
 
+void inicializarMatrizCores() {
+    for (int x = 0; x < width; ++x) {
+        for (int y = 0; y < height; ++y) {
+            matrizCoresPixels[x][y][0] = 255; // Vermelho
+            matrizCoresPixels[x][y][1] = 255; // Verde
+            matrizCoresPixels[x][y][2] = 255; // Azul
+            // 255 em cada -> pixel branco (fundo da tela)
+        }
+    }
+}
 
 // Funcao principal
 int main(int argc, char** argv){
+	inicializarMatrizCores();								// inicializa matriz que registra as cores dos pixels
     glutInit(&argc, argv); 									// Passagens de parametro C para o glut
     glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB); 			// Selecao do Modo do Display e do Sistema de cor
     glutInitWindowSize (width, height);  					// Tamanho da janela do OpenGL
@@ -212,12 +224,26 @@ void reshape(int w, int h){
 
 // Controla os desenhos na tela
 void display(void){
-    glClear(GL_COLOR_BUFFER_BIT); 				//Limpa o buffer de cores e reinicia a matriz
+    glClear(GL_COLOR_BUFFER_BIT); 				// Limpa o buffer de cores e reinicia a matriz
     glColor3f (0.0, 0.0, 0.0); 					// Seleciona a cor default como preto
     drawFormas(); 								// Desenha as formas geometricas da lista
     //Desenha texto com as coordenadas da posicao do mouse
     draw_text_stroke(0, 0, "(" + to_string(m_x) + "," + to_string(m_y) + ")", 0.2);
-    glutSwapBuffers(); 							// manda o OpenGl renderizar as primitivas
+    
+    glBegin(GL_POINTS);
+	for (int x = 0; x < width; ++x) {
+	    for (int y = 0; y < height; ++y) {
+	        if (matrizCoresPixels[x][y][0] != 255 || matrizCoresPixels[x][y][1] != 255 || matrizCoresPixels[x][y][2] != 255) {
+                glColor3f(matrizCoresPixels[x][y][0] / 255.0f,
+                          matrizCoresPixels[x][y][1] / 255.0f,
+                          matrizCoresPixels[x][y][2] / 255.0f);
+                glVertex2i(x, y);
+			}
+		}
+	}
+		
+	glEnd();
+	glutSwapBuffers(); 							// manda o OpenGl renderizar as primitivas
 }
 
 // Controla o menu pop-up
@@ -391,29 +417,67 @@ void getCorPixel(int x, int y, int color[3]){
     // printf("(%d, %d, %d)\n", color[0], color[1], color[2]);
 }
 
-void floodFill(int x, int y, int atualR, int atualG, int atualB, int novoR, int novoG, int novoB){
-    int corPixel[3];
-    getCorPixel(x, y, corPixel);
-    
-	if (x < 0 || x >= width || y < 0 || y >= height) return;
+void floodFill(int x, int y, int atualR, int atualG, int atualB, int novoR, int novoG, int novoB) {
+    // Verifica os limites
+    if (x < 0 || x >= width || y < 0 || y >= height) return;
 
-    if(corPixel[0] == atualR && corPixel[1] == atualG && corPixel[2] == atualB) {
-        // Se a cor for a mesma do pixel de origem, alteramos para a nova cor
-        glColor3f(novoR / 255.0f, novoG / 255.0f, novoB / 255.0f); // Define a nova cor
+    // Verifica se a cor do pixel atual é igual à cor a ser substituída
+    if (matrizCoresPixels[x][y][0] == atualR &&
+        matrizCoresPixels[x][y][1] == atualG &&
+        matrizCoresPixels[x][y][2] == atualB) {
 
-        // Desenha o pixel colorido
-        glBegin(GL_POINTS);
-        glVertex2i(x, y);
-        glEnd();
-    	glutPostRedisplay(); // Atualiza a tela para mostrar o pixel desenhado
+        // Altera a cor do pixel
+        matrizCoresPixels[x][y][0] = novoR;
+        matrizCoresPixels[x][y][1] = novoG;
+        matrizCoresPixels[x][y][2] = novoB;
 
-        // Preenche os vizinhos de maneira recursiva
-        floodFill(x + 1, y, atualR, atualG, atualB, novoR, novoG, novoB); // Vizinhos à direita
-        // floodFill(x - 1, y, atualR, atualG, atualB, novoR, novoG, novoB); // Vizinhos à esquerda
-        // floodFill(x, y + 1, atualR, atualG, atualB, novoR, novoG, novoB); // Vizinhos acima
-        // floodFill(x, y - 1, atualR, atualG, atualB, novoR, novoG, novoB); // Vizinhos abaixo
+        // Preenche a linha à direita
+        int i = x + 1;
+        while (i < width && matrizCoresPixels[i][y][0] == atualR &&
+                           matrizCoresPixels[i][y][1] == atualG &&
+                           matrizCoresPixels[i][y][2] == atualB) {
+            matrizCoresPixels[i][y][0] = novoR;
+            matrizCoresPixels[i][y][1] = novoG;
+            matrizCoresPixels[i][y][2] = novoB;
+            i++;
+        }
+
+        // Preenche a linha à esquerda
+        i = x - 1;
+        while (i >= 0 && matrizCoresPixels[i][y][0] == atualR &&
+                           matrizCoresPixels[i][y][1] == atualG &&
+                           matrizCoresPixels[i][y][2] == atualB) {
+            matrizCoresPixels[i][y][0] = novoR;
+            matrizCoresPixels[i][y][1] = novoG;
+            matrizCoresPixels[i][y][2] = novoB;
+            i--;
+        }
+
+        // Agora preenche as linhas acima e abaixo de forma similar
+        // Linha acima
+        if (y + 1 < height) {
+            for (int i = x; i < width; ++i) {
+                if (matrizCoresPixels[i][y + 1][0] == atualR &&
+                    matrizCoresPixels[i][y + 1][1] == atualG &&
+                    matrizCoresPixels[i][y + 1][2] == atualB) {
+                    floodFill(i, y + 1, atualR, atualG, atualB, novoR, novoG, novoB);
+                }
+            }
+        }
+
+        // Linha abaixo
+        if (y - 1 >= 0) {
+            for (int i = x; i >= 0; --i) {
+                if (matrizCoresPixels[i][y - 1][0] == atualR &&
+                    matrizCoresPixels[i][y - 1][1] == atualG &&
+                    matrizCoresPixels[i][y - 1][2] == atualB) {
+                    floodFill(i, y - 1, atualR, atualG, atualB, novoR, novoG, novoB);
+                }
+            }
+        }
     }
 }
+
 
 // Controle dos botoes do mouse
 void mouse(int button, int state, int x, int y){
@@ -423,7 +487,7 @@ void mouse(int button, int state, int x, int y){
         		int cor[3];
 				getCorPixel(x, y, cor);
 				floodFill(x, height - y - 1, cor[0], cor[1], cor[2], 255, 0, 0);
-				glutSwapBuffers();
+				
 			}
 			else{
 				switch(modo){
@@ -762,7 +826,7 @@ void drawFormas(){
 		}
 	}
     
-    //Percorre a lista de formas geometricas para desenhar
+    // Percorre a lista de formas geometricas para desenhar
     for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
     	int i = 0;
     	vector<double> x, y;
