@@ -71,6 +71,15 @@ struct Color{
     GLfloat B;
 };
 
+// Estrutura para possibilitar o armazenamento do resultado do floodfill
+struct pontoColorido{
+	GLint x, y;
+    Color color;
+    pontoColorido(GLint _x, GLint _y, Color _color) : x(_x), y(_y), color(_color) {} // construtor explicito
+};
+
+vector<pontoColorido> pixelsPreenchidos;
+
 // Obter cor do pixel
 Color getPixelColor(GLint x, GLint y){
     Color color;
@@ -80,6 +89,8 @@ Color getPixelColor(GLint x, GLint y){
 
 // Mudar cor do pixel
 void setPixelColor(GLint x, GLint y, Color color){
+    pontoColorido ponto(x, y, color);
+    pixelsPreenchidos.push_back(ponto);
     glColor3f(color.R, color.G, color.B);
     glBegin(GL_POINTS);
     glVertex2i(x, y);
@@ -830,6 +841,17 @@ void drawFormas(){
 			    break;	
         }
     }
+    
+    // Desenhar pixels coloridos
+    for (vector<pontoColorido>::iterator it = pixelsPreenchidos.begin(); it != pixelsPreenchidos.end(); ++it) {
+	    pontoColorido& ponto = *it;  // Declara explicitamente como uma referência
+	
+	    glColor3f(ponto.color.R, ponto.color.G, ponto.color.B);
+	    glBegin(GL_POINTS);
+	    glVertex2i(ponto.x, ponto.y);
+	    glEnd();
+	}
+
 }
 
 void algoritmoBresenham(double x1, double y1, double x2, double y2) {

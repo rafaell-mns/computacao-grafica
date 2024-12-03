@@ -65,6 +65,7 @@ void draw_text_stroke(float x, float y, std::string text, float scale = SCALE, f
 {
     glPushMatrix();
         glTranslatef(x, y, 0);
+		glColor3f(0.0f, 0.0f, 0.0f); 
         glScalef(scale, scale, scale); // define o tamanho do fonte
         glLineWidth(lineWidth); // define a espessura da fonte
         for(char * i = (char *)text.c_str(); *i; i++){
