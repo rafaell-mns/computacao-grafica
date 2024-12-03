@@ -32,13 +32,11 @@ using namespace std;
 // Enumeracao com os tipos de formas geometricas
 enum tipo_forma{LIN = 1, RET = 2, TRI = 3, POL = 4, CIR = 5}; // Linha, Triangulo, Retangulo, Poligono e Circulo
 enum tipo_transf{TRA = 6, ROT = 7, ESCA = 8, CIS = 9, REF = 10}; // Translacao, Rotacao, Escala, Cisalhamento e Reflexao
-enum cores{VERMELHO = 11};
 
 // Verificacoes booleanas
 bool click1 = false, click2 = false; 	// clique do mouse
 bool poligonoIniciado = false;			// "o desenho do poligono ja foi iniciado?"
 int n = 2;								// quantidade vertices atuais poligono
-bool colorir = false;
 
 // Coordenadas do mouse
 int m_x, m_y; 							// posicao atual do mouse
@@ -50,7 +48,6 @@ int operacao = TRA;
 
 // Largura e altura da janela
 int width = 512, height = 512;
-int matrizCoresPixels[512][512][3];	// matriz para armazenar cores e renderiza-las
 
 // Definicao de vertice
 struct vertice{
@@ -63,6 +60,51 @@ struct forma{
     int tipo;
     forward_list<vertice> v; //lista encadeada de vertices
 };
+
+
+bool colorir = false;
+
+// Estrutura para cor
+struct Color{
+    GLfloat R;
+    GLfloat G;
+    GLfloat B;
+};
+
+// Obter cor do pixel
+Color getPixelColor(GLint x, GLint y){
+    Color color;
+    glReadPixels(x, y, 1, 1, GL_RGB, GL_FLOAT, &color);
+    return color;
+}
+
+// Mudar cor do pixel
+void setPixelColor(GLint x, GLint y, Color color){
+    glColor3f(color.R, color.G, color.B);
+    glBegin(GL_POINTS);
+    glVertex2i(x, y);
+    glEnd();
+    glutSwapBuffers();
+}
+
+// Retorna true ou false dependendo se as cores sao iguais ou nao
+bool saoIguais(Color a, Color b){
+    return a.R == b.R && a.G == b.G && a.B == b.B;
+}
+
+void floodFill(GLint x, GLint y, Color corAntiga, Color novaCor){
+    Color color;
+    color = getPixelColor(x, y);
+
+    if (saoIguais(color, corAntiga)){
+    	printf("Tentando pintar\n");
+        setPixelColor(x, y, novaCor);
+        floodFill(x + 1, y, corAntiga, novaCor);
+        floodFill(x, y + 1, corAntiga, novaCor);
+        floodFill(x - 1, y, corAntiga, novaCor);
+        floodFill(x, y - 1, corAntiga, novaCor);
+    }
+}
 
 // Lista encadeada de formas geometricas
 forward_list<forma> formas;
@@ -131,20 +173,9 @@ void reflexao(int Rx, int Ry);			// Declara reflexao
 void algoritmoBresenham (double x1,double y1,double x2,double y2);
 void rasterizaCircunferencia (int xc, int yc, double raio);
 
-void inicializarMatrizCores() {
-    for (int x = 0; x < width; ++x) {
-        for (int y = 0; y < height; ++y) {
-            matrizCoresPixels[x][y][0] = 255; // canal R
-            matrizCoresPixels[x][y][1] = 255; // canal G
-            matrizCoresPixels[x][y][2] = 255; // canal B
-            // 255 em cada -> pixel branco (fundo da tela)
-        }
-    }
-}
 
 // Funcao principal
 int main(int argc, char** argv){
-	inicializarMatrizCores();								// inicializa matriz que registra as cores dos pixels
     glutInit(&argc, argv); 									// Passagens de parametro C para o glut
     glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB); 			// Selecao do Modo do Display e do Sistema de cor
     glutInitWindowSize (width, height);  					// Tamanho da janela do OpenGL
@@ -180,18 +211,17 @@ int main(int argc, char** argv){
 	glutAttachMenu(GLUT_RIGHT_BUTTON);
 	
 	printf("=================================================================\n");
-	printf("Por padrao, LINHA, TRANSLACAO, colorir DESATIVADO e VERMELHO estao previamente selecionados\n\n");
+	printf("Por padrao, LINHA e TRANSLACAO estao previamente selecionados\n\n");
 	printf("Teclas disponiveis:\n");
-	printf("  C - Alternar colorir/desenhar\n");
-	printf("  P - Limpar a tela\n");
-	printf("  Z - Apagar a ultima forma desenhada\n\n");
+	printf("  'C' - Limpar a tela\n");
+	printf("  'Z' - Apagar a ultima forma desenhada\n\n");
 	printf("Transformacoes (apos selecionar no menu):\n");
-	printf("  WASD  Direcao da translacao\n");
-	printf("   R    Rotacao\n");
-	printf("   WS   Aumentar/diminuir a escala\n");
-	printf("   XY   Cisalhamento no eixo X ou Y\n");
-	printf("  XYO   Reflexao sobre o eixo X, o eixo Y ou a origem do sistema\n\n");
-	printf("OBS: O poligono exibe previamente como vai ser ele fechado a partir\n     de 3 vertices, mas ele pode ter mais vertices conforme for\n     clicando na tela ate clicar no ponto incial\n");
+	printf("  'WASD' - Direcao da translacao\n");
+	printf("  'R' - Rotacao\n");
+	printf("  'WS' - Aumentar/diminuir a escala\n");
+	printf("  'XY' - Cisalhamento no eixo X ou Y\n");
+	printf("  'XYO' - Reflexao sobre o eixo X, o eixo Y ou a origem do sistema\n\n");
+	printf("OBS: Para fechar o poligono, desenhar sobre a previa que conecta\n     ao primeiro vertice\n");
 	printf("=================================================================\n");
 	printf("\n");
 
@@ -225,26 +255,12 @@ void reshape(int w, int h){
 
 // Controla os desenhos na tela
 void display(void){
-    glClear(GL_COLOR_BUFFER_BIT); 				// Limpa o buffer de cores e reinicia a matriz
+    glClear(GL_COLOR_BUFFER_BIT); 				//Limpa o buffer de cores e reinicia a matriz
     glColor3f (0.0, 0.0, 0.0); 					// Seleciona a cor default como preto
     drawFormas(); 								// Desenha as formas geometricas da lista
     //Desenha texto com as coordenadas da posicao do mouse
     draw_text_stroke(0, 0, "(" + to_string(m_x) + "," + to_string(m_y) + ")", 0.2);
-    
-    glBegin(GL_POINTS);
-	for (int x = 0; x < width; ++x) {
-	    for (int y = 0; y < height; ++y) {
-	        if (matrizCoresPixels[x][y][0] != 255 || matrizCoresPixels[x][y][1] != 255 || matrizCoresPixels[x][y][2] != 255) {
-                glColor3f(matrizCoresPixels[x][y][0] / 255.0f,
-                          matrizCoresPixels[x][y][1] / 255.0f,
-                          matrizCoresPixels[x][y][2] / 255.0f);
-                glVertex2i(x, y);
-			}
-		}
-	}
-		
-	glEnd();
-	glutSwapBuffers(); 							// manda o OpenGl renderizar as primitivas
+    glutSwapBuffers(); 							// manda o OpenGl renderizar as primitivas
 }
 
 // Controla o menu pop-up
@@ -270,10 +286,9 @@ void keyboard(unsigned char key, int x, int y){
         case ESC: 
             exit(EXIT_SUCCESS); 
             break;
-        case 'p':								// Limpar a tela
-        case 'P':
+        case 'c':								// Limpar a tela
+        case 'C':
             formas.clear();
-            inicializarMatrizCores();
             printf("Tela limpada\n\n");
             glutPostRedisplay();
             break;
@@ -285,8 +300,8 @@ void keyboard(unsigned char key, int x, int y){
 			  glutPostRedisplay();	
 			} 
             break;
-        case 'c':
-	    case 'C':
+        case 'p':
+	    case 'P':
 	    	colorir = !colorir;
 	    	if(colorir) printf("Modo colorir ATIVADO. Proibido desenhar.\n");
 	    	else printf("Modo colorir DESATIVADO. Livre para desenhar.\n");
@@ -404,70 +419,23 @@ void keyboard(unsigned char key, int x, int y){
     }
 }
 
-void getCorPixel(int x, int y, int color[3]) {
-    y = height - y - 1;  // converte coordenada de mouse para OpenGL
-    unsigned char colorBuffer[3];
-
-    // Lê o pixel na posição (x, y)
-    glReadPixels(x, y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, colorBuffer);
-
-    // Converte os valores de unsigned char para int
-    color[0] = static_cast<int>(colorBuffer[0]);  // Vermelho
-    color[1] = static_cast<int>(colorBuffer[1]);  // Verde
-    color[2] = static_cast<int>(colorBuffer[2]);  // Azul
-}
-
-bool mesmaCor(int corA[3], int corB[3]) {
-    return corA[0] == corB[0] && corA[1] == corB[1] && corA[2] == corB[2];
-}
-
-void decodificaCor(int codigoCor, int canalCor[3]) {
-    if (codigoCor == VERMELHO) {
-        canalCor[0] = 255;  // Vermelho
-        canalCor[1] = 0;    // Verde
-        canalCor[2] = 0;    // Azul
-    }
-}
-
-void floodFill(int x, int y, int corAtual[3], int novaCor[3]) {
-    // Verifica os limites (a tela e a borda preta)
-    if (x < 0 || x >= width || y < 0 || y >= height) return;
-
-    // Lê a cor do pixel atual
-    int corPixel[3];
-    getCorPixel(x, y, corPixel);
-    printf("Pixel (%d, %d): (%d, %d, %d)\n", x, y, corPixel[0], corPixel[1], corPixel[2]);
-
-
-    // Verifica se a cor do pixel é a mesma que a cor que estamos procurando
-    if (!mesmaCor(corPixel, corAtual)) return;
-
-    // Verifica se o pixel é preto (borda) - evita ultrapassar a borda preta
-    if (corPixel[0] == 0 && corPixel[1] == 0 && corPixel[2] == 0) return;  // Preto (borda)
-
-    // Altera a cor do pixel
-    matrizCoresPixels[x][y][0] = novaCor[0];
-    matrizCoresPixels[x][y][1] = novaCor[1];
-    matrizCoresPixels[x][y][2] = novaCor[2];
-
-    // Chama recursivamente para os 4 vizinhos: direita, esquerda, acima e abaixo
-    floodFill(x + 1, y, corAtual, novaCor);  // Direita
-    //floodFill(x - 1, y, corAtual, novaCor);  // Esquerda
-    //floodFill(x, y + 1, corAtual, novaCor);  // Acima
-    //floodFill(x, y - 1, corAtual, novaCor);  // Abaixo
-}
-
 // Controle dos botoes do mouse
 void mouse(int button, int state, int x, int y){
     switch (button) {
         case GLUT_LEFT_BUTTON:
         	if(colorir){
-        		int cor[3];
-				getCorPixel(x, y, cor);
-				int novaCor[3];
-				decodificaCor(VERMELHO, novaCor);
-				floodFill(x, height - y - 1, cor, novaCor);
-				
+        		if (state == GLUT_DOWN) {		
+		    		// Cor do fundo branco.
+					Color oldColor = {1.0f, 1.0f, 1.0f};
+					// Nova cor vermelha.
+					Color newColor = {1.0f, 0.0f, 0.0f};
+					// Coordenada de um ponto no fundo branco (ajuste conforme necessário).
+					floodFill(x, height - y - 1, oldColor, newColor);
+					
+					
+					Color colorAtPoint = getPixelColor(x, height - y - 1); // Ponto dentro do polígono.
+				    printf("Color at (150, 150): r = %f, g = %f, b = %f\n", colorAtPoint.R, colorAtPoint.G, colorAtPoint.B);
+				}
 			}
 			else{
 				switch(modo){
@@ -806,7 +774,7 @@ void drawFormas(){
 		}
 	}
     
-    // Percorre a lista de formas geometricas para desenhar
+    //Percorre a lista de formas geometricas para desenhar
     for(forward_list<forma>::iterator f = formas.begin(); f != formas.end(); f++){
     	int i = 0;
     	vector<double> x, y;
