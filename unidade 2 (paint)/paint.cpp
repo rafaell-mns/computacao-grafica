@@ -33,6 +33,7 @@ using namespace std;
 // Enumeracao com os tipos de formas geometricas
 enum tipo_forma{LIN = 1, RET = 2, TRI = 3, POL = 4, CIR = 5}; // Linha, Triangulo, Retangulo, Poligono e Circulo
 enum tipo_transf{TRA = 6, ROT = 7, ESCA = 8, CIS = 9, REF = 10}; // Translacao, Rotacao, Escala, Cisalhamento e Reflexao
+enum cores { VERMELHO = 11, VERDE = 12, AZUL = 13, LARANJA = 14, PRETO = 15}; // Cores
 
 // Verificacoes booleanas
 bool click1 = false, click2 = false; 	// clique do mouse
@@ -62,7 +63,6 @@ struct forma{
     forward_list<vertice> v; //lista encadeada de vertices
 };
 
-
 bool colorir = false;
 
 // Estrutura para cor
@@ -71,6 +71,8 @@ struct Color{
     GLfloat G;
     GLfloat B;
 };
+
+Color corSelecionada = {1.0f, 0.0f, 0.0f};
 
 // Estrutura para possibilitar o armazenamento do resultado do floodfill
 struct pontoColorido{
@@ -104,8 +106,6 @@ bool saoIguais(Color a, Color b){
     return a.R == b.R && a.G == b.G && a.B == b.B;
 }
 
-
-
 // Preencher para a direita e para cima
 void floodFillDireitaCima(GLint x, GLint y, Color oldColor, Color newColor) {
     std::queue<pontoColorido> filaDePontos;
@@ -118,11 +118,9 @@ void floodFillDireitaCima(GLint x, GLint y, Color oldColor, Color newColor) {
         Color color = getPixelColor(ponto.x, ponto.y);
 
         if (saoIguais(color, oldColor)) {
-            setPixelColor(ponto.x, ponto.y, newColor); // Preenche o ponto
-
-            // Preencher à direita e para cima
-            filaDePontos.push({ponto.x + 1, ponto.y, oldColor}); // Vizinhos à direita
-            filaDePontos.push({ponto.x, ponto.y + 1, oldColor}); // Vizinhos acima
+            setPixelColor(ponto.x, ponto.y, newColor);
+            filaDePontos.push({ponto.x + 1, ponto.y, oldColor});
+            filaDePontos.push({ponto.x, ponto.y + 1, oldColor});
         }
     }
 }
@@ -139,11 +137,9 @@ void floodFillBaixoDireita(GLint x, GLint y, Color oldColor, Color newColor) {
         Color color = getPixelColor(ponto.x, ponto.y);
 
         if (saoIguais(color, oldColor)) {
-            setPixelColor(ponto.x, ponto.y, newColor); // Preenche o ponto
-
-            // Preencher à direita e para baixo
-            filaDePontos.push({ponto.x + 2, ponto.y, oldColor}); // Vizinhos à direita
-            filaDePontos.push({ponto.x, ponto.y - 2, oldColor}); // Vizinhos abaixo
+            setPixelColor(ponto.x, ponto.y, newColor);
+            filaDePontos.push({ponto.x + 2, ponto.y, oldColor});
+            filaDePontos.push({ponto.x, ponto.y - 2, oldColor});
         }
     }
 }
@@ -160,11 +156,9 @@ void floodFillBaixoEsquerda(GLint x, GLint y, Color oldColor, Color newColor) {
         Color color = getPixelColor(ponto.x, ponto.y);
 
         if (saoIguais(color, oldColor)) {
-            setPixelColor(ponto.x, ponto.y, newColor); // Preenche o ponto
-
-            // Preencher à esquerda e para baixo
-            filaDePontos.push({ponto.x - 2, ponto.y, oldColor}); // Vizinhos à esquerda
-            filaDePontos.push({ponto.x, ponto.y - 2, oldColor}); // Vizinhos abaixo
+            setPixelColor(ponto.x, ponto.y, newColor);
+            filaDePontos.push({ponto.x - 2, ponto.y, oldColor});
+            filaDePontos.push({ponto.x, ponto.y - 2, oldColor});
         }
     }
 }
@@ -181,38 +175,19 @@ void floodFillCimaEsquerda(GLint x, GLint y, Color oldColor, Color newColor) {
         Color color = getPixelColor(ponto.x, ponto.y);
 
         if (saoIguais(color, oldColor)) {
-            setPixelColor(ponto.x, ponto.y, newColor); // Preenche o ponto
-
-            // Preencher à esquerda e para cima
-            filaDePontos.push({ponto.x - 2, ponto.y, oldColor}); // Vizinhos à esquerda
-            filaDePontos.push({ponto.x, ponto.y + 2, oldColor}); // Vizinhos acima
+            setPixelColor(ponto.x, ponto.y, newColor);
+            filaDePontos.push({ponto.x - 2, ponto.y, oldColor});
+            filaDePontos.push({ponto.x, ponto.y + 2, oldColor});
         }
     }
 }
 
 void floodFill(GLint x, GLint y, Color oldColor, Color newColor) {
-    // Fase 1: Preencher para a direita e para cima
     floodFillDireitaCima(x, y, oldColor, newColor);
-    printf("1 fase ok\n");
-
-    // Fase 2: Preencher para baixo e para a direita
     floodFillBaixoDireita(x, y - 2, oldColor, newColor);
-    
-
-    // Fase 3: Preencher para baixo e para a esquerda
     floodFillBaixoEsquerda(x - 2, y, oldColor, newColor);
-
-    // Fase 4: Preencher para cima e para a esquerda
     floodFillCimaEsquerda(x - 2, y + 2, oldColor, newColor);
 }
-
-
-
-
-
-
-
-
 
 // Lista encadeada de formas geometricas
 forward_list<forma> formas;
@@ -281,7 +256,6 @@ void reflexao(int Rx, int Ry);			// Declara reflexao
 void algoritmoBresenham (double x1,double y1,double x2,double y2);
 void rasterizaCircunferencia (int xc, int yc, double raio);
 
-
 // Funcao principal
 int main(int argc, char** argv){
     glutInit(&argc, argv); 									// Passagens de parametro C para o glut
@@ -311,27 +285,42 @@ int main(int argc, char** argv){
 	glutAddMenuEntry("Cisalhamento", CIS);
 	glutAddMenuEntry("Reflexao", REF);
 	
+	int menu_cores = glutCreateMenu(menu_popup);
+	glutAddMenuEntry("Vermelho", VERMELHO);
+	glutAddMenuEntry("Verde", VERDE);
+	glutAddMenuEntry("Azul", AZUL);
+	glutAddMenuEntry("Laranja", LARANJA);
+	glutAddMenuEntry("Preto", PRETO);
+	
 	// Menu principal
 	glutCreateMenu(menu_popup);
 	glutAddSubMenu("Desenhar", menu_desenhar);
 	glutAddSubMenu("Transformar", menu_transformacao);
+	glutAddSubMenu("Cores", menu_cores);
 	glutAddMenuEntry("Sair", 0);
 	glutAttachMenu(GLUT_RIGHT_BUTTON);
 	
-	printf("=================================================================\n");
-	printf("Por padrao, LINHA e TRANSLACAO estao previamente selecionados\n\n");
+	
+	
+	printf("*********************************************************************************\n");
+	printf("Por padrao, LINHA, TRANSLACAO e VERMELHO estao previamente selecionados\n\n");
+	
 	printf("Teclas disponiveis:\n");
 	printf("  'C' - Limpar a tela\n");
-	printf("  'Z' - Apagar a ultima forma desenhada\n\n");
+	printf("  'Z' - Apagar a ultima forma desenhada\n");
+	printf("  'P' - Alternar entre colorir/desenhar\n\n");
+	
 	printf("Transformacoes (apos selecionar no menu):\n");
 	printf("  'WASD' - Direcao da translacao\n");
-	printf("  'R' - Rotacao\n");
-	printf("  'WS' - Aumentar/diminuir a escala\n");
-	printf("  'XY' - Cisalhamento no eixo X ou Y\n");
+	printf("  'R'   - Rotacao\n");
+	printf("  'WS'  - Aumentar/diminuir a escala\n");
+	printf("  'XY'  - Cisalhamento no eixo X ou Y\n");
 	printf("  'XYO' - Reflexao sobre o eixo X, o eixo Y ou a origem do sistema\n\n");
-	printf("OBS: Para fechar o poligono, desenhar sobre a previa que conecta\n     ao primeiro vertice\n");
-	printf("=================================================================\n");
-	printf("\n");
+	
+	
+	printf("Observacao: Para fechar o poligono, desenhe sobre o ponto inicial para conecta-lo\n");
+	printf("*********************************************************************************\n");
+
 
     glutMainLoop(); 			// executa o loop do OpenGL
     return EXIT_SUCCESS; 		// retorna 0 para o tipo inteiro da funcao main();
@@ -377,8 +366,31 @@ void menu_popup(int value){
     
     if (value >= LIN && value <= CIR) {
 		modo = value;
-	} else if(value > CIR){
+	} else if(value > CIR && value <= REF){
 		operacao = value;
+	} else if (value >= VERMELHO) {
+        switch (value) {
+            case VERMELHO:
+                corSelecionada = {1.0f, 0.0f, 0.0f};
+				printf("Cor vermelha selecionada\n");
+                break;
+            case VERDE:
+                corSelecionada = {0.0f, 1.0f, 0.0f};
+                printf("Cor verde selecionada\n");
+                break;
+            case AZUL:
+                corSelecionada = {0.0f, 0.0f, 1.0f};
+                printf("Cor azul selecionada\n");
+                break;
+            case LARANJA:
+                corSelecionada = {1.0f, 0.647f, 0.0f};
+                printf("Cor laranja selecionada\n");
+                break;
+            case PRETO:
+                corSelecionada = {0.0f, 0.0f, 0.0f};
+                printf("Cor preta selecionada\n");
+                break;
+        }
 	}
 }
 
@@ -397,6 +409,7 @@ void keyboard(unsigned char key, int x, int y){
         case 'c':								// Limpar a tela
         case 'C':
             formas.clear();
+            pixelsPreenchidos.clear();
             printf("Tela limpada\n\n");
             glutPostRedisplay();
             break;
@@ -411,8 +424,8 @@ void keyboard(unsigned char key, int x, int y){
         case 'p':
 	    case 'P':
 	    	colorir = !colorir;
-	    	if(colorir) printf("Modo colorir ATIVADO. Proibido desenhar.\n");
-	    	else printf("Modo colorir DESATIVADO. Livre para desenhar.\n");
+	    	if(colorir) printf("Modo COLORIR. Proibido desenhar.\n");
+	    	else printf("Modo DESENHAR. Livre para desenhar.\n");
 	    	printf("\n");
 	    	break;
         case 'W':
@@ -443,7 +456,7 @@ void keyboard(unsigned char key, int x, int y){
 		            break;
 		        case ESCA:
 		        	if(!formas.empty()){
-		        		printf("Formas diminuidas em 1/%.1fx\n", fatorEscala);
+		        		printf("Formas diminuidas em 1/%.0fx\n", fatorEscala);
 		        		escala(1/fatorEscala, 1/fatorEscala);
 					}
 					break;
@@ -532,17 +545,9 @@ void mouse(int button, int state, int x, int y){
     switch (button) {
         case GLUT_LEFT_BUTTON:
         	if(colorir){
-        		if (state == GLUT_DOWN) {		
-		    		// Cor do fundo branco.
-					Color oldColor = {1.0f, 1.0f, 1.0f};
-					// Nova cor vermelha.
-					Color newColor = {1.0f, 0.0f, 0.0f};
-					// Coordenada de um ponto no fundo branco (ajuste conforme necessário).
-					floodFill(x, height - y - 1, oldColor, newColor);
-					
-					
-					Color colorAtPoint = getPixelColor(x, height - y - 1); // Ponto dentro do polígono.
-				    printf("Color at (150, 150): r = %f, g = %f, b = %f\n", colorAtPoint.R, colorAtPoint.G, colorAtPoint.B);
+        		if (state == GLUT_DOWN) {	
+					Color oldColor = {1.0f, 1.0f, 1.0f}; // cor do fundo = branco
+					floodFill(x, height - y - 1, oldColor, corSelecionada);
 				}
 			}
 			else{
