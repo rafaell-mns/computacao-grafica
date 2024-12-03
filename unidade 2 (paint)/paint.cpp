@@ -16,6 +16,7 @@
     #include <GL/glu.h>
 #endif
 
+#include <queue>
 #include <cmath>
 #include <cstdio>
 #include <vector>
@@ -103,19 +104,115 @@ bool saoIguais(Color a, Color b){
     return a.R == b.R && a.G == b.G && a.B == b.B;
 }
 
-void floodFill(GLint x, GLint y, Color corAntiga, Color novaCor){
-    Color color;
-    color = getPixelColor(x, y);
 
-    if (saoIguais(color, corAntiga)){
-    	printf("Tentando pintar\n");
-        setPixelColor(x, y, novaCor);
-        floodFill(x + 1, y, corAntiga, novaCor);
-        floodFill(x, y + 1, corAntiga, novaCor);
-        floodFill(x - 1, y, corAntiga, novaCor);
-        floodFill(x, y - 1, corAntiga, novaCor);
+
+// Preencher para a direita e para cima
+void floodFillDireitaCima(GLint x, GLint y, Color oldColor, Color newColor) {
+    std::queue<pontoColorido> filaDePontos;
+    filaDePontos.push({x, y, oldColor});
+    
+    while (!filaDePontos.empty()) {
+        pontoColorido ponto = filaDePontos.front();
+        filaDePontos.pop();
+
+        Color color = getPixelColor(ponto.x, ponto.y);
+
+        if (saoIguais(color, oldColor)) {
+            setPixelColor(ponto.x, ponto.y, newColor); // Preenche o ponto
+
+            // Preencher à direita e para cima
+            filaDePontos.push({ponto.x + 1, ponto.y, oldColor}); // Vizinhos à direita
+            filaDePontos.push({ponto.x, ponto.y + 1, oldColor}); // Vizinhos acima
+        }
     }
 }
+
+// Preencher para baixo e para a direita
+void floodFillBaixoDireita(GLint x, GLint y, Color oldColor, Color newColor) {
+    std::queue<pontoColorido> filaDePontos;
+    filaDePontos.push({x, y, oldColor});
+    
+    while (!filaDePontos.empty()) {
+        pontoColorido ponto = filaDePontos.front();
+        filaDePontos.pop();
+
+        Color color = getPixelColor(ponto.x, ponto.y);
+
+        if (saoIguais(color, oldColor)) {
+            setPixelColor(ponto.x, ponto.y, newColor); // Preenche o ponto
+
+            // Preencher à direita e para baixo
+            filaDePontos.push({ponto.x + 2, ponto.y, oldColor}); // Vizinhos à direita
+            filaDePontos.push({ponto.x, ponto.y - 2, oldColor}); // Vizinhos abaixo
+        }
+    }
+}
+
+// Preencher para baixo e para a esquerda
+void floodFillBaixoEsquerda(GLint x, GLint y, Color oldColor, Color newColor) {
+    std::queue<pontoColorido> filaDePontos;
+    filaDePontos.push({x, y, oldColor});
+    
+    while (!filaDePontos.empty()) {
+        pontoColorido ponto = filaDePontos.front();
+        filaDePontos.pop();
+
+        Color color = getPixelColor(ponto.x, ponto.y);
+
+        if (saoIguais(color, oldColor)) {
+            setPixelColor(ponto.x, ponto.y, newColor); // Preenche o ponto
+
+            // Preencher à esquerda e para baixo
+            filaDePontos.push({ponto.x - 2, ponto.y, oldColor}); // Vizinhos à esquerda
+            filaDePontos.push({ponto.x, ponto.y - 2, oldColor}); // Vizinhos abaixo
+        }
+    }
+}
+
+// Preencher para cima e para a esquerda
+void floodFillCimaEsquerda(GLint x, GLint y, Color oldColor, Color newColor) {
+    std::queue<pontoColorido> filaDePontos;
+    filaDePontos.push({x, y, oldColor});
+    
+    while (!filaDePontos.empty()) {
+        pontoColorido ponto = filaDePontos.front();
+        filaDePontos.pop();
+
+        Color color = getPixelColor(ponto.x, ponto.y);
+
+        if (saoIguais(color, oldColor)) {
+            setPixelColor(ponto.x, ponto.y, newColor); // Preenche o ponto
+
+            // Preencher à esquerda e para cima
+            filaDePontos.push({ponto.x - 2, ponto.y, oldColor}); // Vizinhos à esquerda
+            filaDePontos.push({ponto.x, ponto.y + 2, oldColor}); // Vizinhos acima
+        }
+    }
+}
+
+void floodFill(GLint x, GLint y, Color oldColor, Color newColor) {
+    // Fase 1: Preencher para a direita e para cima
+    floodFillDireitaCima(x, y, oldColor, newColor);
+    printf("1 fase ok\n");
+
+    // Fase 2: Preencher para baixo e para a direita
+    floodFillBaixoDireita(x, y - 2, oldColor, newColor);
+    
+
+    // Fase 3: Preencher para baixo e para a esquerda
+    floodFillBaixoEsquerda(x - 2, y, oldColor, newColor);
+
+    // Fase 4: Preencher para cima e para a esquerda
+    floodFillCimaEsquerda(x - 2, y + 2, oldColor, newColor);
+}
+
+
+
+
+
+
+
+
 
 // Lista encadeada de formas geometricas
 forward_list<forma> formas;
